@@ -77,8 +77,12 @@ Use the table below to track all recorded sessions as your team completes develo
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
 | 01 | `s1gate_task01_architecture_audit.png` | IBM-hackathon | Architecture & Security Audit of S1Gate | WilliamAxelC | 156.8k tokens / 14.69 Bobcoins | ✅ Verified |
 | 02 | `s1gate_task02_implementation_subtasks.png` | IBM-hackathon | Benchmark validation (72/72 passed) & Sub-tasks execution | WilliamAxelC | Agent Mode execution | ✅ Verified |
-| 03 | `s1gate_task03_bob_ide_workspace_view.png` | IBM-hackathon | Bob IDE full workspace, 9/9 sub-tasks & git push | WilliamAxelC | 123.8k tokens / 13.02 Bobcoins | ✅ Verified |
-| 04 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
+| 03 | `s1gate_task03_consumption_summary_modal.png` | IBM-hackathon | **Task Consumption Summary Modal** (Task Id `38a62e...`, Region: `us-east`) | WilliamAxelC | 123.8k tokens / 13.02 Bobcoins | ✅ Verified |
+| 04 | `s1gate_task03_budget_remaining_summary.png` | IBM-hackathon | 40 Bobcoins Allocation & Budget remaining (28.34 / 40.00) | WilliamAxelC | Budget Tracker | ✅ Verified |
+| 05 | `s1gate_task03_bob_ide_workspace_view.png` | IBM-hackathon | Bob IDE full workspace, 9/9 sub-tasks & git push | WilliamAxelC | 123.8k tokens / 13.02 Bobcoins | ✅ Verified |
+| 06 | `s1gate_task03_all_tasks_completed.png` | IBM-hackathon | Completion status view (14 files changed, branch push) | WilliamAxelC | Workflow verification | ✅ Verified |
+| 07 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
+
 
 
 
