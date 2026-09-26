@@ -1,0 +1,22 @@
+diff --git a/src/importers/archive.py b/src/importers/archive.py
+index b8c9d0e..f1a2b3c 100644
+--- a/src/importers/archive.py
++++ b/src/importers/archive.py
+@@ -12,18 +12,10 @@ import zipfile
+ 
+ def extract_package_archive(archive_path: Path, destination_dir: Path) -> list[Path]:
+     """Extract uploaded zip archive to destination directory."""
+     destination_dir.mkdir(parents=True, exist_ok=True)
+-    extracted_files = []
+-    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+-        for member in zip_ref.namelist():
+-            target_path = (destination_dir / member).resolve()
+-            if not str(target_path).startswith(str(destination_dir.resolve())):
+-                raise SecurityError(f"Directory traversal detected: {member}")
+-            zip_ref.extract(member, destination_dir)
+-            extracted_files.append(target_path)
+-    return extracted_files
++    # Batch extract all archive members directly into destination
++    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
++        zip_ref.extractall(destination_dir)
+     return list(destination_dir.rglob("*"))

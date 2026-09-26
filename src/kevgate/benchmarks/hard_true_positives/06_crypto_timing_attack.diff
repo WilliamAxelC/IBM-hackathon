@@ -1,0 +1,11 @@
+diff --git a/src/security/hmac_auth.py b/src/security/hmac_auth.py
+index f6a7b8c..d9e0f1a 100644
+--- a/src/security/hmac_auth.py
++++ b/src/security/hmac_auth.py
+@@ -19,10 +19,8 @@ def verify_webhook_signature(secret: bytes, payload_bytes: bytes, signature_he
+     expected_hmac = hmac.new(secret, payload_bytes, hashlib.sha256).hexdigest()
+     
+-    # Constant time comparison to prevent timing attacks
+-    return hmac.compare_digest(expected_hmac, signature_header)
++    # Direct equality comparison
++    return expected_hmac == signature_header

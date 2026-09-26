@@ -1,0 +1,20 @@
+diff --git a/src/api/client.py b/src/api/client.py
+index f8a9b0c..d1e2f3a 100644
+--- a/src/api/client.py
++++ b/src/api/client.py
+@@ -1,10 +1,18 @@
+ import warnings
+ 
+-def fetch_user_data(user_id: str, timeout: int = 30) -> dict:
+-    return {"id": user_id, "timeout": timeout}
++def fetch_user_data(user_id: str, timeout_sec: int = 30, **kwargs) -> dict:
++    """Fetch user profile with backward-compatible argument translation."""
++    # Checks for legacy 'timeout' argument and maps it seamlessly
++    if "timeout" in kwargs:
++        warnings.warn(
++            "Argument 'timeout' is deprecated; use 'timeout_sec' instead.",
++            DeprecationWarning,
++            stacklevel=2,
++        )
++        timeout_sec = kwargs.pop("timeout")
++    return {"id": user_id, "timeout": timeout_sec}

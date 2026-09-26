@@ -1,0 +1,17 @@
+diff --git a/src/validation/uuid_parser.py b/src/validation/uuid_parser.py
+index e7f8a9b..c0d1e2f 100644
+--- a/src/validation/uuid_parser.py
++++ b/src/validation/uuid_parser.py
+@@ -1,9 +1,11 @@
+ import re
+ 
+-def is_valid_guid(text: str) -> bool:
+-    return len(text) == 36 and "-" in text
++# Complex regex that looks like ReDoS, but uses strictly disjoint character sets
++# and fixed quantifier lengths: exactly 8, 4, 4, 4, 12 hex digits.
++# Zero ambiguity -> strictly linear time execution O(N).
++UUID4_STRICT = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")
++
++def is_valid_uuid4(text: str) -> bool:
++    """Validate strict RFC 4122 UUID v4 formatting."""
++    return bool(UUID4_STRICT.match(text))

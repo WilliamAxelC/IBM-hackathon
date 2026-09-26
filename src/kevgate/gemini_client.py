@@ -85,18 +85,18 @@ class GeminiClient:
         self._async_client = async_client
 
     def _get_client(self) -> httpx.Client:
-        if self._client is not None:
-            return self._client
-        return httpx.Client(timeout=30.0)
+        if self._client is None:
+            self._client = httpx.Client(timeout=60.0)
+        return self._client
 
     def _get_async_client(self) -> httpx.AsyncClient:
-        if self._async_client is not None:
-            return self._async_client
-        return httpx.AsyncClient(timeout=30.0)
+        if self._async_client is None:
+            self._async_client = httpx.AsyncClient(timeout=60.0)
+        return self._async_client
 
     async def __aenter__(self) -> "GeminiClient":
         if self._async_client is None:
-            self._async_client = httpx.AsyncClient(timeout=30.0)
+            self._async_client = httpx.AsyncClient(timeout=60.0)
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -135,20 +135,35 @@ class GeminiClient:
         }
 
         raw_text = ""
-        try:
-            client = self._get_client()
-            resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            raw_json = json.loads(raw_text)
-            return DecisionPayload.model_validate(raw_json)
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            if self.config.offline_behavior in ("pass", "warn"):
-                return _OFFLINE_PASS_PAYLOAD
-            raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
-        except (json.JSONDecodeError, KeyError, ValidationError) as e:
-            raise DecisionParseError(raw_text, e) from e
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                client = self._get_client()
+                resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+                if resp.status_code == 429 and attempt < max_retries - 1:
+                    time.sleep((2 ** attempt) * 2)
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                raw_json = json.loads(raw_text)
+                return DecisionPayload.model_validate(raw_json)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    time.sleep((2 ** attempt) * 2)
+                    continue
+                if self.config.offline_behavior in ("pass", "warn"):
+                    return _OFFLINE_PASS_PAYLOAD
+                raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
+            except httpx.RequestError as e:
+                if attempt < max_retries - 1:
+                    time.sleep((2 ** attempt) * 2)
+                    continue
+                if self.config.offline_behavior in ("pass", "warn"):
+                    return _OFFLINE_PASS_PAYLOAD
+                raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
+            except (json.JSONDecodeError, KeyError, ValidationError) as e:
+                raise DecisionParseError(raw_text, e) from e
 
     async def triage_diff_async(self, diff: str, context: Optional[str] = None) -> DecisionPayload:
         """Triage a unified diff asynchronously using Gemini API."""
@@ -173,20 +188,35 @@ class GeminiClient:
         }
 
         raw_text = ""
-        try:
-            client = self._get_async_client()
-            resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            raw_json = json.loads(raw_text)
-            return DecisionPayload.model_validate(raw_json)
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            if self.config.offline_behavior in ("pass", "warn"):
-                return _OFFLINE_PASS_PAYLOAD
-            raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
-        except (json.JSONDecodeError, KeyError, ValidationError) as e:
-            raise DecisionParseError(raw_text, e) from e
+        max_retries = 4
+        for attempt in range(max_retries):
+            try:
+                client = self._get_async_client()
+                resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+                if resp.status_code == 429 and attempt < max_retries - 1:
+                    await asyncio.sleep((2 ** attempt) * 2)
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+                raw_json = json.loads(raw_text)
+                return DecisionPayload.model_validate(raw_json)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    await asyncio.sleep((2 ** attempt) * 2)
+                    continue
+                if self.config.offline_behavior in ("pass", "warn"):
+                    return _OFFLINE_PASS_PAYLOAD
+                raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
+            except httpx.RequestError as e:
+                if attempt < max_retries - 1:
+                    await asyncio.sleep((2 ** attempt) * 2)
+                    continue
+                if self.config.offline_behavior in ("pass", "warn"):
+                    return _OFFLINE_PASS_PAYLOAD
+                raise GeminiUnavailableError(f"Gemini API request failed: {e}") from e
+            except (json.JSONDecodeError, KeyError, ValidationError) as e:
+                raise DecisionParseError(raw_text, e) from e
 
     def verify_remediation(
         self, original_diff: str, remediation_patch: str, previous_score: int = 70

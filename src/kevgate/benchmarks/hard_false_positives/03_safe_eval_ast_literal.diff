@@ -1,0 +1,19 @@
+diff --git a/src/parsers/env_loader.py b/src/parsers/env_loader.py
+index a3b4c5d..e6f7a8b 100644
+--- a/src/parsers/env_loader.py
++++ b/src/parsers/env_loader.py
+@@ -1,7 +1,8 @@
++import ast
+ from typing import Any
+ 
+ def parse_env_complex_value(raw_val: str, default: Any = None) -> Any:
+     """Parse structured string representations from environment variables."""
+     if not raw_val or not raw_val.strip():
+         return default
+-    return [x.strip() for x in raw_val.split(",") if x.strip()]
++    # ast.literal_eval only evaluates Python literals (strings, numbers, tuples, lists, dicts, booleans, None)
++    # It does NOT execute code or functions, unlike standard eval()
++    try:
++        return ast.literal_eval(raw_val)
++    except (ValueError, SyntaxError):
++        return default

@@ -36,8 +36,31 @@ S1Gate supports two interchangeable backends:
 
 | Backend | Mode | Speed | Setup | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`gemini` (Default for MVP)** | Cloud API | **~100–150ms** | Free API key in `.env` | Instant setup, zero local GPU requirements, CI/CD |
+| **`gemini` (Default for MVP)** | Cloud API | **~100–350ms** | Free API key in `.env` (`gemini-3.5-flash-lite`) | Instant setup, zero local GPU requirements, CI/CD |
 | **`lmstudio`** | Local GPU | **~50–80ms** | Local LM Studio on `localhost:1234` | 100% offline air-gapped privacy (AMD RX 6600 XT, NVIDIA) |
+
+---
+
+## 🌐 Hosted Remote MCP Server for Hackathon Judges
+
+Judges can connect directly to a live, hosted **S1Gate MCP Server** without installing Python or cloning this repository locally!
+
+- **Hosted SSE Endpoint**: `http://10.20.20.11:8000/sse`
+- **Security**: Protected via API Key (`Authorization: Bearer <JUDGE_KEY>` or `?api_key=<JUDGE_KEY>`).
+- **Complete Evaluator Guide**: See [docs/JUDGE_REMOTE_MCP_GUIDE.md](docs/JUDGE_REMOTE_MCP_GUIDE.md).
+
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "http://10.20.20.11:8000/sse",
+      "headers": {
+        "Authorization": "Bearer <JUDGE_KEY>"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -132,6 +155,41 @@ Blocked commit → Bob reads .bob/tasks/pending_remediation.json
                → Bob calls s1gate_verify_remediation(original_diff, patch)
                → Risk drops from 95 → 2 (PASS)
                → Bob commits the verified fix!
+```
+
+---
+
+## 📊 Empirical Benchmarks & Error Matrix (Hard Commit Challenge)
+
+To validate S1Gate's System-1 decision layer against real-world production risks, S1Gate includes an automated **Benchmark Harness** evaluated against live **Google Gemini 3.5 Flash Lite**:
+
+- **Dataset**: 20 production git diffs featuring subtle vulnerabilities (SSRF DNS rebinding, JWT algorithm confusion, TOCTOU double-spend, Catastrophic ReDoS, Prototype pollution, Timing attacks, Deserialization RCE, Zip Slip, Buried PATs, and Breaking API keyword conversions) paired with complex benign refactorings (Safe dynamic SQL ASTs, Constant-time loops, Safe literal parsing, Restricted unpicklers, Zero-copy memory views, Thread-safe double-checked locks).
+- **Comparison**: S1Gate Pipeline (Entropy scan + AST filtering + Invariant JSON + Policy Engine) vs. **Naive Direct Gemini 3.5 Flash Lite Prompting**.
+
+### The Pre-Commit Error Matrix & Asymmetric Cost
+
+In developer pre-commit gates, classification errors carry vastly asymmetric business costs:
+
+| Error Type | Taxonomy | Event | Developer & Business Impact |
+| :--- | :--- | :--- | :--- |
+| **True Positive (TP)** | True Flag | Risky code correctly **BLOCKED** | **Vulnerability Shielded**: Zero production harm ($0). |
+| **True Negative (TN)** | Safe Pass | Benign code correctly **PASSED** | **Frictionless Flow**: Instant commit (<150ms). |
+| **False Positive (FP)** | Type I Error | Benign code mistakenly **BLOCKED** | **Developer Friction**: ~2–5 minutes lost reviewing warning. |
+| **False Negative (FN)** | **Type II Error** | Vulnerability mistakenly **PASSED** | **Catastrophic Outage/Breach**: $50,000+ incident cost, leaked keys, CVEs. |
+
+> **Key Result**: S1Gate achieves a **0% Type II Escape Rate (0/10 missed)**, eliminating critical security escapes before code reaches remote branches.
+
+Comprehensive visual charts and per-diff analysis are documented in [docs/benchmarks/BENCHMARK_REPORT.md](docs/benchmarks/BENCHMARK_REPORT.md):
+- **Error Matrix Heatmap**: [`docs/benchmarks/s1gate_error_matrix.png`](docs/benchmarks/s1gate_error_matrix.png) (mirrored to [`bob_sessions/s1gate_error_matrix.png`](bob_sessions/s1gate_error_matrix.png))
+- **Performance Comparison Graph**: [`docs/benchmarks/s1gate_vs_baseline_comparison.png`](docs/benchmarks/s1gate_vs_baseline_comparison.png) (mirrored to [`bob_sessions/s1gate_benchmark_metrics_graph.png`](bob_sessions/s1gate_benchmark_metrics_graph.png))
+
+To re-run the benchmark suite:
+```bash
+# Run the Hard Commit Challenge suite
+python -m kevgate.benchmarks.benchmark_harness --dataset hard
+
+# Run the standard suite
+python -m kevgate.benchmarks.benchmark_harness --dataset standard
 ```
 
 ---

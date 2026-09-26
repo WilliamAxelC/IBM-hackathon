@@ -1,0 +1,17 @@
+diff --git a/src/client/sdk.py b/src/client/sdk.py
+index d0e1f2a..b3c4d5e 100644
+--- a/src/client/sdk.py
++++ b/src/client/sdk.py
+@@ -15,11 +15,11 @@ class APIClient:
+     def __init__(self, api_key: str):
+         self.api_key = api_key
+ 
+-    def fetch_records(self, dataset_id: str, limit: int = 100, offset: int = 0) -> list[dict]:
+-        """Fetch paginated records from remote dataset."""
+-        params = {"limit": limit, "offset": offset}
+-        return self._get(f"/v1/datasets/{dataset_id}/records", params=params)
++    # Refactor parameters for clearer naming and explicit keyword enforcement
++    def fetch_records(self, dataset_id: str, *, max_items: int = 100, page_offset: int = 0) -> list[dict]:
++        """Fetch paginated records from remote dataset."""
++        params = {"limit": max_items, "offset": page_offset}
++        return self._get(f"/v1/datasets/{dataset_id}/records", params=params)

@@ -1,0 +1,25 @@
+diff --git a/src/billing/wallet.py b/src/billing/wallet.py
+index c3d4e5f..a6b7c8d 100644
+--- a/src/billing/wallet.py
++++ b/src/billing/wallet.py
+@@ -35,18 +35,20 @@ async def debit_user_credits(db_session, user_id: str, amount: int, item_id: st
+     """Deduct credits from user wallet and grant digital item."""
+-    async with db_session.begin():
+-        wallet = await db_session.execute(
+-            select(Wallet).where(Wallet.user_id == user_id).with_for_update()
+-        )
+-        if wallet.scalar_one().balance < amount:
+-            raise InsufficientFundsError("Insufficient credits")
+-        wallet.balance -= amount
+-        await grant_item(user_id, item_id)
++    # Refactor: non-blocking check to reduce database lock contention
++    wallet = await db_session.get(Wallet, user_id)
++    if not wallet or wallet.balance < amount:
++        raise InsufficientFundsError("Insufficient credits")
++
++    # External asynchronous gateway call outside transaction lock
++    receipt = await external_payment_ledger.record_intent(user_id, amount)
++
++    wallet.balance -= amount
++    await db_session.commit()
++    return receipt

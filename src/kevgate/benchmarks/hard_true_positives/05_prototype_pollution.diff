@@ -1,0 +1,14 @@
+diff --git a/src/utils/config_merge.py b/src/utils/config_merge.py
+index e5f6a7b..c8d9e0f 100644
+--- a/src/utils/config_merge.py
++++ b/src/utils/config_merge.py
+@@ -8,11 +8,15 @@ def recursive_dict_update(target: dict, source: dict) -> dict:
+     """Deeply merge configuration dictionaries."""
+     for key, value in source.items():
+         if isinstance(value, dict) and key in target and isinstance(target[key], dict):
+             recursive_dict_update(target[key], value)
++        elif hasattr(target, key):
++            setattr(target, key, value)
+         else:
+             target[key] = value
+     return target

@@ -83,10 +83,7 @@ Use the table below to track all recorded sessions as your team completes develo
 | 06 | `s1gate_task03_all_tasks_completed.png` | IBM-hackathon | Completion status view (14 files changed, branch push) | WilliamAxelC | Workflow verification | ✅ Verified |
 | 07 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
 | 08 | `s1gate_benchmark_metrics_graph.png` | IBM-hackathon | S1Gate vs. Naive Baseline: Latency, Accuracy, Confusion Matrix | WilliamAxelC | 20-diff Benchmark Suite | ✅ Verified |
-
-
-
-
+| 09 | `s1gate_error_matrix.png` | IBM-hackathon | **Error Matrix (TP/FP/TN/FN)**: Type I False Alarm vs Type II Breach Escapes | WilliamAxelC | 20 Hard Diffs Challenge | ✅ Verified |
 
 ---
 
