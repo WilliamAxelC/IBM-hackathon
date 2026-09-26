@@ -23,5 +23,15 @@ htmlcov/
 .idea/
 .vscode/
 
-# KevGate generated files
+# Environment & Secrets (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.env
+
+# Tool caches
+.playwright-mcp/
+
+# S1Gate generated files
 .bob/tasks/pending_remediation.json
+.s1gate/

@@ -149,7 +149,7 @@ def format_gate_result(
     end = reset if use_color else ""
 
     lines = [
-        f"{color}╔══ KevGate ─ {decision.value} ══╗{end}",
+        f"{color}╔══ S1Gate ─ {decision.value} ══╗{end}",
         f"  Category   : {payload.category}",
         f"  Risk Score : {payload.risk_score}/100  (confidence: {payload.confidence:.0%})",
         f"  Summary    : {payload.summary}",

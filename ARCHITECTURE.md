@@ -1,4 +1,4 @@
-# KevGate: Universal System-1 Decision Layer & Pre-Commit Gate for Agentic Coding Harnesses
+# S1Gate: Universal System-1 Decision Layer & Pre-Commit Gate for Agentic Coding Harnesses
 
 > **Document Type**: Architecture & Technical Specification  
 > **Target Audience**: Core Team, Peer Engineers, and Autonomous AI Agents (IBM Bob, Claude Code, Agrav, Kiro, Codex, DeepSeek Harness)  
@@ -12,13 +12,18 @@
 Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigravity**, **Kiro**, **Codex**, and **DeepSeek Harness**) excel at deep, multi-file code synthesis and refactoring (**System-2 Deliberative Reasoning**). However, deploying these generative models directly on every routine developer event (like a `git commit` hook or PR triage) creates two fatal operational bottlenecks:
 
 1. **Flow-State Latency**: Autoregressive LLM generation takes 5–30 seconds per evaluation, causing developers to immediately disable git hooks with `--no-verify`.
-2. **Token & Quota Burn**: 80–90% of commits are routine clean changes (formatting, docs, isolated internal edits). Running heavy LLMs on every micro-commit rapidly exhausts token allowances and hackathon quotas (such as IBM Bob's 40 Bobcoins limit).
+2. **Token & Quota Burn**: 80–90% of commits are routine clean changes (formatting, docs, isolated internal edits). Running heavy LLMs on every micro-commit rapidly exhausts token allowances and hackathon quotas (such as IBM Bob's strict 40 Bobcoins limit).
 
-**KevGate** introduces a **Universal System-1 Decision Layer** positioned immediately in front of the agentic harnesses. Powered by a local non-autoregressive decision model (**Kev-4B** served via LM Studio / llama.cpp), KevGate evaluates unified git diffs in **~30–60ms** using candidate logit readout and schema-constrained decoding.
+**S1Gate** introduces a **Universal System-1 Decision Layer** positioned immediately in front of the agentic harnesses. 
 
-- **Clean Commits (<30 Risk Score)**: Instantly greenlit (<80ms, 0 tokens / 0 Bobcoins burned).
+### Dual-Backend Strategy (MVP & Offline)
+* **Cloud MVP (Default)**: Powered by **Google Gemini 2.0 Flash Lite** (via free-tier API key in `.env`). Delivers sub-150ms triage, native strict JSON Schema decoding (`response_schema`), and zero local hardware setup requirements.
+* **Local Offline GPU**: Connects to **LM Studio** (`http://localhost:1234/v1`) running on local consumer GPUs (such as an AMD Radeon RX 6600 XT with Qwen2.5-Coder-3B or Kev-4B) for 100% air-gapped, zero-network environments.
+
+### The Decision Funnel
+- **Clean Commits (<30 Risk Score)**: Instantly greenlit (<150ms, 0 tokens / 0 Bobcoins burned).
 - **High-Risk Regressions / Security Vulnerabilities (≥70 Risk Score)**: Hard-blocked at the gate and packaged into a structured **Remediation Intent Protocol (RIP)**.
-- **Universal Protocol**: Exposed as a standard **Model Context Protocol (MCP) server**, allowing **any** agentic harness (Bob, Claude Code, Agrav, Kiro, Codex, DeepSeek) to consume KevGate for both pre-commit gating and self-verifying **Actor-Critic loops**.
+- **Universal Protocol**: Exposed as a standard **Model Context Protocol (MCP) server**, allowing **any** agentic harness (Bob, Claude Code, Agrav, Kiro, Codex, DeepSeek) to consume S1Gate for both pre-commit gating and self-verifying **Actor-Critic loops**.
 
 ---
 
@@ -29,7 +34,7 @@ Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigra
                                        │
                                        ▼
              ┌───────────────────────────────────────────────────┐
-             │            KevGate Git Interceptor                │
+             │             S1Gate Git Interceptor                │
              │       (.git/hooks/pre-commit or CLI tool)         │
              └─────────────────────────┬─────────────────────────┘
                                        │  Raw Unified Diff
@@ -43,11 +48,11 @@ Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigra
                                        │
                                        ▼
              ┌───────────────────────────────────────────────────┐
-             │    System 1: Local Decision Engine (Kev-4B)       │
-             │    • Served via LM Studio (localhost:1234)        │
-             │    • Single completion with max_tokens: 80        │
-             │    • Grammar-constrained JSON schema decoding     │
-             │    • Latency: ~30-60ms on local GPU / CPU         │
+             │            System 1: Decision Engine              │
+             │  • Backend A (Default MVP): Gemini 2.0 Flash Lite │
+             │    (Free API via .env, sub-150ms, strict JSON)    │
+             │  • Backend B (Offline GPU): LM Studio             │
+             │    (localhost:1234, Qwen2.5-Coder / Kev-4B)       │
              └─────────────────────────┬─────────────────────────┘
                                        │
                                        ▼
@@ -66,12 +71,12 @@ Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigra
                            ▼                       ▼
                  [ Fast Pass Path ]       [ Block & Dispatch Path ]
                  • Exit code: 0           • Exit code: 1 (Commit aborted)
-                 • Latency: <80ms         • Structured Remediation Intent
-                 • 0 Tokens burned        • Dispatched via Universal MCP
+                 • Latency: <150ms        • Structured Remediation Intent
+                 • 0 Bobcoins burned      • Dispatched via Universal MCP
                                                    │
                                                    ▼
             ┌─────────────────────────────────────────────────────────────┐
-            │        Universal MCP Interface (`kevgate-mcp`)              │
+            │        Universal MCP Interface (`s1gate-mcp`)               │
             │   JSON-RPC standard compatible across all agent harnesses   │
             └──────────────┬───────────────────────────────┬──────────────┘
                            │                               │
@@ -82,13 +87,35 @@ Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigra
 
 ---
 
-## 3. Universal MCP Interface Specification
+## 3. Environment & Security Configuration (`.env`)
 
-KevGate exposes standard tools through the **Model Context Protocol (MCP)** specification over `stdio` and `sse`. Any agent harness supporting MCP can register KevGate in its configuration.
+For the MVP, S1Gate authenticates against Google AI Studio using an API key loaded from `.env`:
+
+```env
+# .env (NEVER COMMITTED)
+S1GATE_BACKEND=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Local LM Studio fallback (Optional)
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+LMSTUDIO_MODEL=qwen2.5-coder-3b-instruct
+```
+
+> [!CAUTION]
+> **Zero-Leakage Security Policy**:
+> 1. `.env` and `*.env` are explicitly registered in [`.gitignore`](.gitignore).
+> 2. The repo provides a sanitized template at [`.env.example`](.env.example).
+> 3. S1Gate's pre-commit hook automatically scans for uncommitted `.env` files and hard-blocks any commit that attempts to stage environment secrets.
+
+---
+
+## 4. Universal MCP Interface Specification
+
+S1Gate exposes standard tools through the **Model Context Protocol (MCP)** specification over `stdio` and `sse`. Any agent harness supporting MCP can register S1Gate in its configuration.
 
 ### Exposed MCP Tools
 
-#### Tool 1: `kevgate_triage_diff`
+#### Tool 1: `s1gate_triage_diff`
 Evaluates a unified git diff against the decision model and returns the full typed decision payload.
 - **Input Schema**:
   ```json
@@ -103,7 +130,7 @@ Evaluates a unified git diff against the decision model and returns the full typ
   ```
 - **Response**: Full `DecisionPayload` JSON.
 
-#### Tool 2: `kevgate_inspect_file`
+#### Tool 2: `s1gate_inspect_file`
 Evaluates a specific file's uncommitted or staged changes against universal semantic invariants.
 - **Input Schema**:
   ```json
@@ -116,7 +143,7 @@ Evaluates a specific file's uncommitted or staged changes against universal sema
   }
   ```
 
-#### Tool 3: `kevgate_verify_remediation` (Actor-Critic Loop)
+#### Tool 3: `s1gate_verify_remediation` (Actor-Critic Loop)
 Takes the original problematic diff and the agent's proposed remediation patch, executing a delta evaluation to verify whether the vulnerability or contract break was resolved.
 - **Input Schema**:
   ```json
@@ -142,14 +169,14 @@ Takes the original problematic diff and the agent's proposed remediation patch, 
 
 ---
 
-## 4. Cross-Harness Interoperability Matrix
+## 5. Cross-Harness Interoperability Matrix
 
-KevGate is intentionally **harness-agnostic**. The core gate and decision logic run independently of the consuming agent.
+S1Gate is intentionally **harness-agnostic**. The core gate and decision logic run independently of the consuming agent.
 
 | Agentic Harness | Connection Mechanism | Primary Workflow Role |
 | :--- | :--- | :--- |
 | **IBM Bob IDE** | Native MCP via `mcp.json` + Task Payload | Runs Agent Mode refactoring; captures task consumption summaries for `bob_sessions/` deliverable. |
-| **Claude Code** | Native MCP via `.claude/mcp.json` or CLI tool | Interactive terminal agent invoking `kevgate_verify_remediation` during file edits. |
+| **Claude Code** | Native MCP via `.claude/mcp.json` or CLI tool | Interactive terminal agent invoking `s1gate_verify_remediation` during file edits. |
 | **Agrav (Antigravity)** | Eager/Lazy MCP server in CLI settings | Pre-execution guardrail and automated remediation agent. |
 | **Kiro** | MCP Server integration / Tool dispatch | Autonomous loop gating and tool call validation. |
 | **Codex / OpenHands** | MCP stdio container connector | Headless CI gating and automated PR fix dispatch. |
@@ -162,11 +189,11 @@ KevGate is intentionally **harness-agnostic**. The core gate and decision logic 
 ```json
 {
   "mcpServers": {
-    "kevgate": {
+    "s1gate": {
       "command": "python",
       "args": ["-m", "kevgate.mcp_server"],
       "env": {
-        "LMSTUDIO_BASE_URL": "http://localhost:1234/v1"
+        "S1GATE_BACKEND": "gemini"
       }
     }
   }
@@ -177,8 +204,8 @@ KevGate is intentionally **harness-agnostic**. The core gate and decision logic 
 ```json
 {
   "mcpServers": {
-    "kevgate": {
-      "command": "kevgate-mcp",
+    "s1gate": {
+      "command": "s1gate-mcp",
       "args": []
     }
   }
@@ -187,9 +214,9 @@ KevGate is intentionally **harness-agnostic**. The core gate and decision logic 
 
 ---
 
-## 5. Universal State & Decision Schema
+## 6. Universal State & Decision Schema
 
-To maintain complete polyglot support (Python, Go, Rust, TypeScript, Terraform, Docker, YAML), KevGate does **not** rely on language-specific AST parsers. It evaluates the universal **Unified Diff** format.
+To maintain complete polyglot support (Python, Go, Rust, TypeScript, Terraform, Docker, YAML), S1Gate does **not** rely on language-specific AST parsers. It evaluates the universal **Unified Diff** format.
 
 ### Typed Output Primitives (Pydantic Specification)
 
@@ -226,78 +253,78 @@ class DecisionPayload(BaseModel):
 
 ---
 
-## 6. The Actor-Critic Verification Loop
+## 7. The Actor-Critic Verification Loop
 
-A major vulnerability of generative AI coding assistants is **hallucinated or incomplete patches**. KevGate solves this by acting as an impartial **Critic**:
+A major vulnerability of generative AI coding assistants is **hallucinated or incomplete patches**. S1Gate solves this by acting as an impartial **Critic**:
 
 ```sequence
 Developer->>Git: git commit
-Git->>KevGate: Execute pre-commit hook (git diff --cached)
-KevGate->>LM Studio: Single forward pass on diff
-LM Studio-->>KevGate: Score: 92 (SQL Injection in auth.py)
-KevGate-->>Git: Exit 1 (Commit Blocked)
-KevGate->>Agent Harness: Dispatch Remediation Intent Payload
+Git->>S1Gate: Execute pre-commit hook (git diff --cached)
+S1Gate->>Decision Engine: Single forward pass on diff
+Decision Engine-->>S1Gate: Score: 92 (SQL Injection in auth.py)
+S1Gate-->>Git: Exit 1 (Commit Blocked)
+S1Gate->>Agent Harness: Dispatch Remediation Intent Payload
 Agent Harness->>Agent Harness: Generate patch (parameterized query)
-Agent Harness->>KevGate: Tool Call: kevgate_verify_remediation(original, patch)
-KevGate->>LM Studio: Re-evaluate patch delta
-LM Studio-->>KevGate: Score: 4 (Clean, vulnerability eliminated)
-KevGate-->>Agent Harness: Verification: PASS (Delta -88)
+Agent Harness->>S1Gate: Tool Call: s1gate_verify_remediation(original, patch)
+S1Gate->>Decision Engine: Re-evaluate patch delta
+Decision Engine-->>S1Gate: Score: 4 (Clean, vulnerability eliminated)
+S1Gate-->>Agent Harness: Verification: PASS (Delta -88)
 Agent Harness->>Git: git commit (Patch Approved & Logged)
 ```
 
 ---
 
-## 7. LM Studio & Hardware Runtime Configuration
+## 8. Backends: Cloud API & Local Hardware
 
-### Target Hardware: AMD Radeon RX 6600 XT (8 GB VRAM)
-- **Model Checkpoint**: `Kev-4B` (GGUF format, `Q4_K_M` or `Q8_0`).
-- **Memory Footprint**:
-  - `Q4_K_M`: **~2.5 GB VRAM** (leaves >5 GB free for system, IDE, browser).
-  - `Q8_0`: **~4.2 GB VRAM** (maximum precision within 8 GB envelope).
-- **Inference Acceleration**:
-  - LM Studio automatically enables hardware acceleration via **Vulkan** or **ROCm** on RDNA 2 GPUs.
-  - Short generation loop: `max_tokens: 80` with grammar-constrained JSON schema decoding means generation terminates after the decision payload is emitted, completing in **30ms–60ms**.
+### Backend A: Gemini 2.0 Flash Lite (MVP Default)
+- **Model**: `gemini-2.0-flash-lite`
+- **Latency**: ~100–150ms
+- **Cost**: $0.00 (Google AI Studio Free Tier: 1,500 requests/day, 15 RPM)
+- **Decoding**: Strict JSON Schema constrained decoding (`response_mime_type="application/json"`)
+- **Key Storage**: `.env` (gitignored)
 
-### LM Studio Server Settings
-- **Port**: `1234` (`http://localhost:1234/v1`)
-- **Sampling Parameters**:
-  - `temperature`: `0.0` (deterministic)
-  - `max_tokens`: `80`
-  - `response_format`: `{"type": "json_object"}`
+### Backend B: LM Studio (Local GPU / Air-Gapped)
+- **Target Hardware**: AMD Radeon RX 6600 XT (8 GB VRAM) / NVIDIA RTX
+- **Model**: `Qwen2.5-Coder-3B-Instruct` or `Kev-4B` (GGUF format, `Q8_0` or `Q6_K`)
+- **Server**: `http://localhost:1234/v1`
+- **Sampling**: `temperature=0.0`, `max_tokens=80`, `response_format={"type": "json_object"}`
 
 ---
 
-## 8. Hackathon Eligibility Alignment (IBM Bob 2.0)
+## 9. Hackathon Eligibility Alignment (IBM Bob 2.0)
 
-While KevGate is architected to be completely universal, it directly fulfills the **IBM Bob 2.0 Hackathon criteria**:
+While S1Gate is architected to be completely universal, it directly fulfills the **IBM Bob 2.0 Hackathon criteria**:
 
 1. **Showcases IBM Bob IDE as a Core Component**:
-   When KevGate blocks a commit, it generates a native IBM Bob task specification (`.bob/tasks/pending_remediation.json`). Bob IDE's Agent mode consumes the task, executes the multi-file refactoring, and logs the session.
+   When S1Gate blocks a commit, it generates a native IBM Bob task specification (`.bob/tasks/pending_remediation.json`). Bob IDE's Agent mode consumes the task, executes the multi-file refactoring, and logs the session.
 2. **Solves the 40 Bobcoins Constraint**:
-   By using KevGate's local System-1 model to filter out the 85% of clean commits, **Bobcoins are conserved 100% for high-value, complex code generation tasks in Bob IDE**.
+   By using S1Gate's free System-1 discriminator to filter out the 85% of clean commits, **Bobcoins are conserved 100% for high-value, complex code generation tasks in Bob IDE**.
 3. **Generates Required `bob_sessions/` Deliverable**:
-   Every time Bob IDE performs a remediation triggered by KevGate, the session summary screenshot is saved to [`bob_sessions/`](bob_sessions/README.md) as official evidence for judging.
+   Every time Bob IDE performs a remediation triggered by S1Gate, the session summary screenshot is saved to [`bob_sessions/`](bob_sessions/README.md) as official evidence for judging.
 
 ---
 
-## 9. Implementation Roadmap & File Layout
+## 10. Implementation Roadmap & File Layout
 
 ```
 IBM-hackathon/
 ├── ARCHITECTURE.md                  # This document
 ├── README.md                        # Project landing & quickstart
+├── HACKATHON_GUIDE.md               # Hackathon rules, deadlines, judging criteria
+├── .env.example                     # Environment template (API keys)
+├── .gitignore                       # Ensures .env is never committed
 ├── bob_sessions/                    # Mandatory hackathon deliverable folder
 │   └── README.md
 ├── docs/                            # Guides and rules
 │   ├── HACKATHON_GUIDE.md
 │   └── KICKOFF_ANNOUNCEMENT.md
 └── src/
-    └── kevgate/
+    └── kevgate/                     # Core engine (S1Gate)
         ├── __init__.py
-        ├── cli.py                   # Terminal CLI (`kevgate check`, `kevgate hook install`)
+        ├── cli.py                   # Terminal CLI (`s1gate check`, `s1gate hook install`)
         ├── diff_parser.py           # Git diff extraction & chunking
         ├── entropy_scanner.py       # 1ms Shannon entropy & regex secret filter
-        ├── lmstudio_client.py       # HTTP client connecting to local Kev-4B in LM Studio
+        ├── lmstudio_client.py       # HTTP client connecting to local LM Studio / Gemini API
         ├── schema.py                # Pydantic decision models & Jev primitives
         ├── policy_engine.py         # Asymmetric risk thresholding & gating decisions
         ├── mcp_server.py            # Universal MCP Server (stdio & SSE)
@@ -306,18 +333,3 @@ IBM-hackathon/
             ├── true_positives/      # SQLi, exposed secrets, breaking schema
             └── false_positives/     # Tricky safe diffs, mock fixtures, formatting
 ```
-
-### 48-Hour Execution Milestones
-
-- [ ] **Milestone 1: Core Engine & LM Studio Adapter**
-  - Implement `entropy_scanner.py`, `diff_parser.py`, and `lmstudio_client.py`.
-  - Validate schema-constrained JSON output against local Kev-4B in LM Studio.
-- [ ] **Milestone 2: CLI & Git Pre-Commit Hook**
-  - Implement `cli.py` and `hook_manager.py`.
-  - Verify instant pass (<80ms) on clean commits and blocking on risky diffs.
-- [ ] **Milestone 3: Universal MCP Server**
-  - Implement `mcp_server.py` exposing `kevgate_triage_diff` and `kevgate_verify_remediation`.
-  - Connect and test with **IBM Bob IDE** (`mcp.json`) and **Claude Code** (`.claude/mcp.json`).
-- [ ] **Milestone 4: Actor-Critic Verification & Benchmark Suite**
-  - Run the 20-diff benchmark suite proving 0% false positives on safe code and 100% recall on critical flaws.
-  - Record task session summary screenshots for `bob_sessions/`.

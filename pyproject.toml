@@ -14,9 +14,11 @@ dependencies = [
     "httpx>=0.27",
     "typer[all]>=0.12",
     "mcp>=1.0",
+    "python-dotenv>=1.0",
 ]
 
 [project.scripts]
+s1gate = "kevgate.cli:app"
 kevgate = "kevgate.cli:app"
 
 [project.optional-dependencies]

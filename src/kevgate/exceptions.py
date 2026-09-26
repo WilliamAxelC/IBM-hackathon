@@ -18,6 +18,15 @@ class LMStudioUnavailableError(KevGateError):
         self.timeout_ms = timeout_ms
 
 
+class GeminiUnavailableError(KevGateError):
+    """Raised when the Gemini API cannot be reached or API key is missing."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
+
+
+
 class DecisionParseError(KevGateError):
     """Raised when the model response cannot be parsed into a DecisionPayload."""
 
