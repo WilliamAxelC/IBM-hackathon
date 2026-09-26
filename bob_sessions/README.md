@@ -77,7 +77,9 @@ Use the table below to track all recorded sessions as your team completes develo
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
 | 01 | `s1gate_task01_architecture_audit.png` | IBM-hackathon | Architecture & Security Audit of S1Gate | WilliamAxelC | 156.8k tokens / 14.69 Bobcoins | ✅ Verified |
 | 02 | `s1gate_task02_implementation_subtasks.png` | IBM-hackathon | Benchmark validation (72/72 passed) & Sub-tasks execution | WilliamAxelC | Agent Mode execution | ✅ Verified |
-| 03 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
+| 03 | `s1gate_task03_bob_ide_workspace_view.png` | IBM-hackathon | Bob IDE full workspace, 9/9 sub-tasks & git push | WilliamAxelC | 123.8k tokens / 13.02 Bobcoins | ✅ Verified |
+| 04 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
+
 
 
 ---
