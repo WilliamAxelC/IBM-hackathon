@@ -1,4 +1,4 @@
-"""KevGate typed decision schema — Pydantic v2."""
+"""S1Gate typed decision schema — Pydantic v2."""
 
 from __future__ import annotations
 

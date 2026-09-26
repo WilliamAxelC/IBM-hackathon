@@ -13,6 +13,9 @@ from kevgate.cli import app
 from kevgate.policy_engine import GateDecision
 from kevgate.schema import DecisionPayload
 
+# Patch target for the default Gemini backend used in CLI
+_GEMINI_TRIAGE_PATH = "kevgate.cli.GeminiClient"
+
 runner = CliRunner()
 
 
@@ -69,12 +72,10 @@ class TestCheckCommand:
         diff_file = tmp_path / "clean.diff"
         diff_file.write_text(CLEAN_DIFF)
 
-        with patch("kevgate.cli.LMStudioClient") as MockClient:
-            instance = AsyncMock()
-            instance.triage_diff = AsyncMock(return_value=make_safe_payload())
-            instance.__aenter__ = AsyncMock(return_value=instance)
-            instance.__aexit__ = AsyncMock(return_value=None)
-            MockClient.return_value = instance
+        with patch(_GEMINI_TRIAGE_PATH) as MockGemini:
+            instance = MagicMock()
+            instance.triage_diff_async = AsyncMock(return_value=make_safe_payload())
+            MockGemini.return_value = instance
 
             result = runner.invoke(app, ["check", "--diff", str(diff_file), "--no-color"])
 
@@ -85,17 +86,15 @@ class TestCheckCommand:
         diff_file = tmp_path / "risky.diff"
         diff_file.write_text(RISKY_DIFF)
 
-        with patch("kevgate.cli.LMStudioClient") as MockClient, \
+        with patch(_GEMINI_TRIAGE_PATH) as MockGemini, \
              patch("kevgate.cli.generate_bob_task"):
-            instance = AsyncMock()
-            instance.triage_diff = AsyncMock(return_value=make_risky_payload())
-            instance.__aenter__ = AsyncMock(return_value=instance)
-            instance.__aexit__ = AsyncMock(return_value=None)
-            MockClient.return_value = instance
+            instance = MagicMock()
+            instance.triage_diff_async = AsyncMock(return_value=make_risky_payload())
+            MockGemini.return_value = instance
 
             result = runner.invoke(app, ["check", "--diff", str(diff_file), "--no-color"])
 
-        assert result.exit_code == 1
+        assert result.exit_code == 1, result.output
         assert "BLOCK" in result.output
 
     def test_empty_diff_exits_0_with_no_changes_message(self, tmp_path: Path):
@@ -118,11 +117,11 @@ diff --git a/package-lock.json b/package-lock.json
         diff_file = tmp_path / "lockfile.diff"
         diff_file.write_text(lockfile_diff)
 
-        with patch("kevgate.cli.LMStudioClient") as MockClient:
+        with patch(_GEMINI_TRIAGE_PATH) as MockGemini:
             result = runner.invoke(app, ["check", "--diff", str(diff_file)])
 
-        # LM Studio should NOT be called for lockfile-only diffs
-        MockClient.assert_not_called()
+        # LLM backend should NOT be called for lockfile-only diffs
+        MockGemini.assert_not_called()
         assert result.exit_code == 0
 
 

@@ -64,7 +64,7 @@ class TestGeminiClient:
         cfg = S1GateConfig(gemini_api_key="test-key")
         client = GeminiClient(cfg)
         assert client.api_key == "test-key"
-        assert "gemini-3.5-flash-lite" in client.base_url
+        assert "gemini-2.0-flash-lite" in client.base_url
 
     def test_triage_diff_sync_success(self):
         transport = httpx.MockTransport(

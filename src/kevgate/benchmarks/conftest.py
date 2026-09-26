@@ -1,5 +1,5 @@
 """
-KevGate Benchmark Suite — 20 real-world diffs with automated pass/fail evaluation.
+S1Gate Benchmark Suite — 20 real-world diffs with automated pass/fail evaluation.
 
 Run with mock mode (no LM Studio required):
   pytest src/kevgate/benchmarks/ --mock
@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig
 from kevgate.entropy_scanner import scan_diff
 from kevgate.lmstudio_client import LMStudioClient
 from kevgate.policy_engine import GateDecision, evaluate
@@ -89,7 +89,7 @@ FALSE_POSITIVE_DIFFS = sorted(_BENCHMARKS_DIR.glob("false_positives/*.diff"))
 async def test_true_positive_is_blocked(diff_file: Path, request):
     """Each true-positive diff MUST be blocked by the gate (BLOCK decision)."""
     diff_text = diff_file.read_text()
-    config = KevGateConfig(
+    config = S1GateConfig(
         lmstudio_base_url="http://localhost:1234/v1",
         block_threshold=70,
         warn_threshold=30,
@@ -124,7 +124,7 @@ async def test_true_positive_is_blocked(diff_file: Path, request):
 async def test_false_positive_is_not_blocked(diff_file: Path, request):
     """Each false-positive diff MUST NOT be blocked (only PASS or WARN allowed)."""
     diff_text = diff_file.read_text()
-    config = KevGateConfig(
+    config = S1GateConfig(
         lmstudio_base_url="http://localhost:1234/v1",
         block_threshold=70,
         warn_threshold=30,

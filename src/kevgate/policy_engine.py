@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig
 from kevgate.schema import DecisionPayload
 
 
@@ -31,7 +31,7 @@ class GateDecision(str, Enum):
 
 def evaluate(
     payload: DecisionPayload,
-    config: KevGateConfig | None = None,
+    config: S1GateConfig | None = None,
     secret_findings_count: int = 0,
 ) -> GateDecision:
     """
@@ -47,13 +47,13 @@ def evaluate(
 
     Args:
         payload: Typed decision output from the LM Studio adapter.
-        config: KevGate configuration. Loads from environment if None.
+        config: S1Gate configuration. Loads from environment if None.
         secret_findings_count: Number of secrets found by the entropy pre-filter.
 
     Returns:
         GateDecision enum value.
     """
-    cfg = config or KevGateConfig()
+    cfg = config or S1GateConfig()
 
     # Rule 1: Pre-filter caught secrets
     if secret_findings_count > 0:
@@ -109,14 +109,14 @@ def generate_bob_task(
 
     task = {
         "task_type": "remediation",
-        "triggered_by": "kevgate",
+        "triggered_by": "s1gate",
         "version": "1.0",
         "payload": payload.model_dump(),
         "instructions": (
             payload.remediation_hint
             or f"Investigate and fix the following issue: {payload.summary}"
         ),
-        "verification_tool": "kevgate_verify_remediation",
+        "verification_tool": "s1gate_verify_remediation",
         "metadata": {
             "risk_score": payload.risk_score,
             "category": payload.category,

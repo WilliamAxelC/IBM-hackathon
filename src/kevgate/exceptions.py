@@ -1,11 +1,15 @@
-"""KevGate exception hierarchy."""
+"""S1Gate exception hierarchy."""
 
 
-class KevGateError(Exception):
-    """Base exception for all KevGate errors."""
+class S1GateError(Exception):
+    """Base exception for all S1Gate errors."""
 
 
-class LMStudioUnavailableError(KevGateError):
+# Backwards compatibility alias
+KevGateError = S1GateError
+
+
+class LMStudioUnavailableError(S1GateError):
     """Raised when the LM Studio server cannot be reached within the timeout."""
 
     def __init__(self, url: str, timeout_ms: int) -> None:
@@ -18,7 +22,7 @@ class LMStudioUnavailableError(KevGateError):
         self.timeout_ms = timeout_ms
 
 
-class GeminiUnavailableError(KevGateError):
+class GeminiUnavailableError(S1GateError):
     """Raised when the Gemini API cannot be reached or API key is missing."""
 
     def __init__(self, message: str) -> None:
@@ -27,7 +31,7 @@ class GeminiUnavailableError(KevGateError):
 
 
 
-class DecisionParseError(KevGateError):
+class DecisionParseError(S1GateError):
     """Raised when the model response cannot be parsed into a DecisionPayload."""
 
     def __init__(self, raw_response: str, cause: Exception) -> None:
@@ -39,7 +43,7 @@ class DecisionParseError(KevGateError):
         self.cause = cause
 
 
-class GateBlockedError(KevGateError):
+class GateBlockedError(S1GateError):
     """Raised (optionally) when the gate decision is BLOCK."""
 
     def __init__(self, summary: str, risk_score: int) -> None:
