@@ -10,8 +10,9 @@
 
 All official rules, guides, and architectural blueprints have been converted and indexed locally for the project:
 
+- 📘 [**Builder's Hackathon Guide**](HACKATHON_GUIDE.md): The essential builder's guide covering deadlines, prize distribution ($12k), the 3 fatal disqualification rules, Bobcoin conservation, required video pitch, and judging criteria.
 - 🏛️ [**System Architecture & Technical Specification**](ARCHITECTURE.md): Universal System-1 decision gate, LM Studio / Kev-4B integration, cross-harness MCP protocol (Bob, Claude Code, Agrav, Kiro, Codex, DeepSeek), and Actor-Critic verification loop.
-- 📘 [**Full Hackathon Guide**](docs/HACKATHON_GUIDE.md): Complete guide covering Bob IDE installation, configuration, features (Agent mode, subagents, MCP, custom rules, literate coding), hands-on exercises, and official documentation links.
+- 📚 [**Official IBM Bob Guide (Offline Archive)**](docs/HACKATHON_GUIDE.md): Complete verbatim offline copy of the official IBM Bob 2.0 tutorial covering Bob IDE installation, UI walkthroughs, modes, and exercises.
 - 📢 [**Kickoff Announcement & Critical Rules**](docs/KICKOFF_ANNOUNCEMENT.md): The official kickoff announcement detailing deadlines, prize breakdown ($12,000 pool), Bobcoins budgeting, and the 3 eligibility rules.
 - 💡 [**Challenge Tracks & Implementation Guide**](docs/USE_CASES_AND_IDEAS.md): Detailed architectural breakdowns of the 5 recommended developer workflow use cases (Onboarding, Code Review, Testing, Release Readiness, Legacy Modernization).
 - 📸 [**Bob Task Session Screenshots (`bob_sessions/`)**](bob_sessions/README.md): **Mandatory judging deliverable directory**. Contains PNG screenshots of Bob IDE task session consumption summaries.
@@ -50,6 +51,8 @@ Before final submission, ensure complete adherence to these rules:
 ```
 .
 ├── README.md                           # Main project overview & eligibility checklist
+├── HACKATHON_GUIDE.md                  # Comprehensive builder's guide (rules, coins, judging, video)
+├── ARCHITECTURE.md                     # Technical architecture of KevGate universal MCP
 ├── bob_sessions/                       # [REQUIRED DELIVERABLE] Bob IDE task session summary screenshots
 │   ├── .gitkeep
 │   └── README.md                       # Screenshot guidelines, naming format & task tracker
