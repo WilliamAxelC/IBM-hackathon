@@ -21,6 +21,7 @@ import pytest
 
 from kevgate.config import S1GateConfig
 from kevgate.entropy_scanner import scan_diff
+from kevgate.gemini_client import GeminiClient
 from kevgate.lmstudio_client import LMStudioClient
 from kevgate.policy_engine import GateDecision, evaluate
 from kevgate.schema import DecisionPayload
@@ -90,7 +91,6 @@ async def test_true_positive_is_blocked(diff_file: Path, request):
     """Each true-positive diff MUST be blocked by the gate (BLOCK decision)."""
     diff_text = diff_file.read_text()
     config = S1GateConfig(
-        lmstudio_base_url="http://localhost:1234/v1",
         block_threshold=70,
         warn_threshold=30,
         offline_behavior="fail",
@@ -102,6 +102,9 @@ async def test_true_positive_is_blocked(diff_file: Path, request):
     if use_mock:
         # In mock mode: inject a risky payload directly
         payload = _make_risky_payload(f"Mock: risk detected in {diff_file.stem}")
+    elif config.backend == "gemini" and config.gemini_api_key:
+        client = GeminiClient(config)
+        payload = await client.triage_diff_async(diff_text)
     else:
         async with LMStudioClient(config) as client:
             payload = await client.triage_diff(diff_text)
@@ -125,7 +128,6 @@ async def test_false_positive_is_not_blocked(diff_file: Path, request):
     """Each false-positive diff MUST NOT be blocked (only PASS or WARN allowed)."""
     diff_text = diff_file.read_text()
     config = S1GateConfig(
-        lmstudio_base_url="http://localhost:1234/v1",
         block_threshold=70,
         warn_threshold=30,
         offline_behavior="fail",
@@ -136,6 +138,9 @@ async def test_false_positive_is_not_blocked(diff_file: Path, request):
 
     if use_mock:
         payload = _make_safe_payload(f"Mock: safe change in {diff_file.stem}")
+    elif config.backend == "gemini" and config.gemini_api_key:
+        client = GeminiClient(config)
+        payload = await client.triage_diff_async(diff_text)
     else:
         async with LMStudioClient(config) as client:
             payload = await client.triage_diff(diff_text)
@@ -147,3 +152,4 @@ async def test_false_positive_is_not_blocked(diff_file: Path, request):
         f"risk_score={payload.risk_score}, category={payload.category}, "
         f"summary={payload.summary!r}"
     )
+

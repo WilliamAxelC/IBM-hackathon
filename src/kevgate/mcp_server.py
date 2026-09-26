@@ -31,7 +31,12 @@ from kevgate.diff_parser import (
     parse_unified_diff,
 )
 from kevgate.entropy_scanner import scan_diff
-from kevgate.exceptions import DecisionParseError, LMStudioUnavailableError
+from kevgate.exceptions import (
+    DecisionParseError,
+    GeminiUnavailableError,
+    LMStudioUnavailableError,
+    S1GateError,
+)
 from kevgate.gemini_client import GeminiClient
 from kevgate.lmstudio_client import LMStudioClient
 from kevgate.policy_engine import evaluate, format_gate_result, generate_bob_task
@@ -96,7 +101,7 @@ async def s1gate_triage_diff(diff: str, context: Optional[str] = None) -> str:
     """
     try:
         payload, decision, secret_findings = await _triage(diff, context=context)
-    except (LMStudioUnavailableError, DecisionParseError) as exc:
+    except S1GateError as exc:
         return json.dumps({"error": str(exc)})
 
     result = {
@@ -169,7 +174,7 @@ async def s1gate_verify_remediation(
                     remediation_patch=remediation_patch,
                     previous_score=score,
                 )
-    except (LMStudioUnavailableError, DecisionParseError) as exc:
+    except S1GateError as exc:
         return json.dumps({"error": str(exc)})
 
     return result.model_dump_json(indent=2)
