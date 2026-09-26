@@ -87,16 +87,16 @@ class GeminiClient:
     def _get_client(self) -> httpx.Client:
         if self._client is not None:
             return self._client
-        return httpx.Client(timeout=15.0)
+        return httpx.Client(timeout=30.0)
 
     def _get_async_client(self) -> httpx.AsyncClient:
         if self._async_client is not None:
             return self._async_client
-        return httpx.AsyncClient(timeout=15.0)
+        return httpx.AsyncClient(timeout=30.0)
 
     async def __aenter__(self) -> "GeminiClient":
         if self._async_client is None:
-            self._async_client = httpx.AsyncClient(timeout=15.0)
+            self._async_client = httpx.AsyncClient(timeout=30.0)
         return self
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
