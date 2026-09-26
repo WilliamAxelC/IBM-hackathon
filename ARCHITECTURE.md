@@ -45,8 +45,8 @@ Modern AI coding agents (such as **IBM Bob**, **Claude Code**, **Agrav / Antigra
              ┌───────────────────────────────────────────────────┐
              │    System 1: Local Decision Engine (Kev-4B)       │
              │    • Served via LM Studio (localhost:1234)        │
-             │    • Non-autoregressive single-forward-pass       │
-             │    • Constrained JSON grammar (max_tokens: 80)    │
+             │    • Single completion with max_tokens: 80        │
+             │    • Grammar-constrained JSON schema decoding     │
              │    • Latency: ~30-60ms on local GPU / CPU         │
              └─────────────────────────┬─────────────────────────┘
                                        │
@@ -256,7 +256,7 @@ Agent Harness->>Git: git commit (Patch Approved & Logged)
   - `Q8_0`: **~4.2 GB VRAM** (maximum precision within 8 GB envelope).
 - **Inference Acceleration**:
   - LM Studio automatically enables hardware acceleration via **Vulkan** or **ROCm** on RDNA 2 GPUs.
-  - Zero token generation loop: with `max_tokens: 80` and grammar-constrained JSON schema decoding, inference completes in **30ms–60ms**.
+  - Short generation loop: `max_tokens: 80` with grammar-constrained JSON schema decoding means generation terminates after the decision payload is emitted, completing in **30ms–60ms**.
 
 ### LM Studio Server Settings
 - **Port**: `1234` (`http://localhost:1234/v1`)

@@ -1,0 +1,8 @@
+diff --git a/src/utils/formatting.py b/src/utils/formatting.py
+--- a/src/utils/formatting.py
++++ b/src/utils/formatting.py
+@@ -1,8 +1,8 @@
+-def format_name( name:str)->str:
+-    return name.strip( ).title( )
++def format_name(name: str) -> str:
++    return name.strip().title()

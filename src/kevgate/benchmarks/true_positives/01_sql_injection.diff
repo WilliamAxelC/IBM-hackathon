@@ -1,0 +1,8 @@
+diff --git a/src/auth.py b/src/auth.py
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -10,6 +10,6 @@ class AuthService:
+     def login(self, username: str, password: str) -> User:
+-        query = db.execute("SELECT * FROM users WHERE name = ? AND pass = ?", (username, password))
++        query = db.execute(f"SELECT * FROM users WHERE name = '{username}' AND pass = '{password}'")
+         return query.fetchone()

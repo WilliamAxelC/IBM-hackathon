@@ -1,0 +1,11 @@
+diff --git a/src/api/routes.py b/src/api/routes.py
+--- a/src/api/routes.py
++++ b/src/api/routes.py
+@@ -20,6 +20,9 @@ router = APIRouter()
+ @router.get("/users/{user_id}/profile")
+ async def get_profile(user_id: int, db: Session = Depends(get_db)):
++    logger.info("Fetching profile for user_id=%s", user_id)
+     user = db.query(User).filter(User.id == user_id).first()
++    if not user:
++        logger.warning("Profile not found for user_id=%s", user_id)
+     return user

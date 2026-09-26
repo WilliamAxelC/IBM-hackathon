@@ -1,0 +1,9 @@
+diff --git a/src/scripts/cleanup.py b/src/scripts/cleanup.py
+--- a/src/scripts/cleanup.py
++++ b/src/scripts/cleanup.py
+@@ -8,5 +8,6 @@ def cleanup_temp_files(directory: str) -> None:
+     """Remove temporary files from the given directory."""
+-    for f in Path(directory).glob("*.tmp"):
+-        f.unlink()
++    import subprocess
++    subprocess.run(f"rm -rf {directory}/*.tmp", shell=True)

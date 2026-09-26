@@ -1,0 +1,13 @@
+diff --git a/src/services/user_service.py b/src/services/user_service.py
+--- a/src/services/user_service.py
++++ b/src/services/user_service.py
+@@ -15,7 +15,7 @@ class UserService:
+-    def _get_user_cache_key(self, user_id: int) -> str:
++    def _build_cache_key(self, user_id: int) -> str:
+         return f"user:{user_id}"
+ 
+-    def get_user(self, user_id: int) -> User | None:
+-        key = self._get_user_cache_key(user_id)
++    def get_user(self, user_id: int) -> User | None:
++        key = self._build_cache_key(user_id)
+         return self.cache.get(key)

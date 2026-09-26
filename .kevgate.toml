@@ -1,0 +1,20 @@
+# .kevgate.toml — KevGate configuration
+# All values shown are defaults. Uncomment and change as needed.
+
+# LM Studio connection
+# lmstudio_base_url = "http://localhost:1234/v1"
+# lmstudio_model = "kev-4b"       # Model identifier as shown in LM Studio
+# request_timeout_ms = 500         # Abort if LM Studio doesn't respond in 500ms
+
+# Gate thresholds
+# block_threshold = 70             # Risk score >= this → commit blocked (exit 1)
+# warn_threshold = 30              # Risk score >= this → warning printed, commit allowed
+
+# Entropy scanner
+# entropy_threshold = 4.5          # Shannon entropy above this → potential secret
+
+# Offline behaviour when LM Studio is not running:
+#   "pass"  → silently allow the commit
+#   "warn"  → print warning, allow the commit  ← default
+#   "fail"  → hard block the commit (exit 1)
+# offline_behavior = "warn"

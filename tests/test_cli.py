@@ -1,0 +1,136 @@
+"""Tests for cli.py — uses typer CliRunner (no subprocess, no live server)."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from typer.testing import CliRunner
+
+from kevgate.cli import app
+from kevgate.policy_engine import GateDecision
+from kevgate.schema import DecisionPayload
+
+runner = CliRunner()
+
+
+def make_safe_payload() -> DecisionPayload:
+    return DecisionPayload(
+        category="safe_refactor",
+        risk_score=5,
+        confidence=0.98,
+        is_breaking_change=False,
+        exposes_unprotected_resource=False,
+        unhandled_failure_mode=False,
+        summary="Minor comment update.",
+        trigger_agent=False,
+    )
+
+
+def make_risky_payload() -> DecisionPayload:
+    return DecisionPayload(
+        category="security_risk",
+        risk_score=88,
+        confidence=0.95,
+        is_breaking_change=False,
+        exposes_unprotected_resource=True,
+        unhandled_failure_mode=False,
+        summary="SQL injection via string interpolation.",
+        target_file="src/auth.py",
+        target_lines="12-14",
+        remediation_hint="Use parameterized queries.",
+        trigger_agent=True,
+    )
+
+
+CLEAN_DIFF = """\
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1 +1 @@
+-# Old Title
++# New Title
+"""
+
+RISKY_DIFF = """\
+diff --git a/src/auth.py b/src/auth.py
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -1,3 +1,3 @@
+-    query = db.execute("SELECT * FROM users WHERE id = ?", (user_id,))
++    query = db.execute(f"SELECT * FROM users WHERE id = {user_id}")
+"""
+
+
+class TestCheckCommand:
+    def test_clean_diff_exits_0(self, tmp_path: Path):
+        diff_file = tmp_path / "clean.diff"
+        diff_file.write_text(CLEAN_DIFF)
+
+        with patch("kevgate.cli.LMStudioClient") as MockClient:
+            instance = AsyncMock()
+            instance.triage_diff = AsyncMock(return_value=make_safe_payload())
+            instance.__aenter__ = AsyncMock(return_value=instance)
+            instance.__aexit__ = AsyncMock(return_value=None)
+            MockClient.return_value = instance
+
+            result = runner.invoke(app, ["check", "--diff", str(diff_file), "--no-color"])
+
+        assert result.exit_code == 0, result.output
+        assert "PASS" in result.output
+
+    def test_risky_diff_exits_1(self, tmp_path: Path):
+        diff_file = tmp_path / "risky.diff"
+        diff_file.write_text(RISKY_DIFF)
+
+        with patch("kevgate.cli.LMStudioClient") as MockClient, \
+             patch("kevgate.cli.generate_bob_task"):
+            instance = AsyncMock()
+            instance.triage_diff = AsyncMock(return_value=make_risky_payload())
+            instance.__aenter__ = AsyncMock(return_value=instance)
+            instance.__aexit__ = AsyncMock(return_value=None)
+            MockClient.return_value = instance
+
+            result = runner.invoke(app, ["check", "--diff", str(diff_file), "--no-color"])
+
+        assert result.exit_code == 1
+        assert "BLOCK" in result.output
+
+    def test_empty_diff_exits_0_with_no_changes_message(self, tmp_path: Path):
+        diff_file = tmp_path / "empty.diff"
+        diff_file.write_text("")
+
+        result = runner.invoke(app, ["check", "--diff", str(diff_file)])
+        assert result.exit_code == 0
+        assert "No staged changes" in result.output
+
+    def test_lockfile_only_diff_skips_llm(self, tmp_path: Path):
+        lockfile_diff = """\
+diff --git a/package-lock.json b/package-lock.json
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1 +1 @@
+-  "version": "1.0.0",
++  "version": "1.0.1",
+"""
+        diff_file = tmp_path / "lockfile.diff"
+        diff_file.write_text(lockfile_diff)
+
+        with patch("kevgate.cli.LMStudioClient") as MockClient:
+            result = runner.invoke(app, ["check", "--diff", str(diff_file)])
+
+        # LM Studio should NOT be called for lockfile-only diffs
+        MockClient.assert_not_called()
+        assert result.exit_code == 0
+
+
+class TestConfigCommand:
+    def test_config_outputs_valid_json(self):
+        result = runner.invoke(app, ["config"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "lmstudio_base_url" in data
+        assert "block_threshold" in data
+        assert "offline_behavior" in data

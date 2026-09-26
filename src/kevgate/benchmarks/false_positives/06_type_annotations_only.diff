@@ -1,0 +1,13 @@
+diff --git a/src/models/user.py b/src/models/user.py
+--- a/src/models/user.py
++++ b/src/models/user.py
+@@ -5,7 +5,7 @@ from sqlalchemy import Column, Integer, String
+ class User(Base):
+     __tablename__ = "users"
+ 
+-    id = Column(Integer, primary_key=True)
+-    name = Column(String)
+-    email = Column(String)
++    id: int = Column(Integer, primary_key=True)
++    name: str = Column(String)
++    email: str = Column(String)

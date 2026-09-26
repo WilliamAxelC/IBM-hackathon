@@ -1,0 +1,12 @@
+diff --git a/src/utils/string_utils.py b/src/utils/string_utils.py
+--- a/src/utils/string_utils.py
++++ b/src/utils/string_utils.py
+@@ -10,5 +10,13 @@ def slugify(text: str) -> str:
+     return re.sub(r"-+", "-", text).strip("-")
++
++
++def truncate(text: str, max_length: int, suffix: str = "...") -> str:
++    """Truncate text to max_length characters, appending suffix if truncated."""
++    if len(text) <= max_length:
++        return text
++    return text[: max_length - len(suffix)] + suffix

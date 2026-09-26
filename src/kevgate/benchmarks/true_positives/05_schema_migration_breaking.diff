@@ -1,0 +1,9 @@
+diff --git a/migrations/0012_drop_user_email_not_null.sql b/migrations/0012_drop_user_email_not_null.sql
+--- /dev/null
++++ b/migrations/0012_drop_user_email_not_null.sql
+@@ -0,0 +1,5 @@
++-- Migration: Remove NOT NULL constraint from users.email
++ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
++-- Also drop the unique index
++DROP INDEX IF EXISTS idx_users_email_unique;
++ALTER TABLE users DROP COLUMN IF EXISTS email_verified;

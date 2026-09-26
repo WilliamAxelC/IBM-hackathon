@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,8 @@
+ # MyProject
+ 
+-A simple web application.
++A fast, secure web application built with FastAPI and PostgreSQL.
++
++## Features
++- REST API with JWT authentication
++- PostgreSQL database with SQLAlchemy ORM
++- Docker Compose for local development

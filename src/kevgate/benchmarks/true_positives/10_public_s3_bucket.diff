@@ -1,0 +1,14 @@
+diff --git a/infra/storage.tf b/infra/storage.tf
+--- a/infra/storage.tf
++++ b/infra/storage.tf
+@@ -8,6 +8,11 @@ resource "aws_s3_bucket" "uploads" {
+   bucket = "company-user-uploads"
+ }
+ 
++resource "aws_s3_bucket_public_access_block" "uploads" {
++  bucket                  = aws_s3_bucket.uploads.id
++  block_public_acls       = false
++  block_public_policy     = false
++  ignore_public_acls      = false
++  restrict_public_buckets = false
++}

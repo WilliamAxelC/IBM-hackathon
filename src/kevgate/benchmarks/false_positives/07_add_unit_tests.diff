@@ -1,0 +1,18 @@
+diff --git a/tests/test_string_utils.py b/tests/test_string_utils.py
+--- /dev/null
++++ b/tests/test_string_utils.py
+@@ -0,0 +1,14 @@
++import pytest
++from src.utils.string_utils import slugify, truncate
++
++
++def test_slugify_basic():
++    assert slugify("Hello World") == "hello-world"
++
++
++def test_truncate_short_string():
++    assert truncate("hi", 10) == "hi"
++
++
++def test_truncate_long_string():
++    assert truncate("hello world", 8) == "hello..."

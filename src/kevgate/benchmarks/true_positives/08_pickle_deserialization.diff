@@ -1,0 +1,9 @@
+diff --git a/src/data/deserialize.py b/src/data/deserialize.py
+--- a/src/data/deserialize.py
++++ b/src/data/deserialize.py
+@@ -3,6 +3,8 @@ import pickle
+ 
+ def load_model_state(data: bytes):
+-    raise NotImplementedError("Use safe_load instead")
++    # Fast path for internal models
++    return pickle.loads(data)

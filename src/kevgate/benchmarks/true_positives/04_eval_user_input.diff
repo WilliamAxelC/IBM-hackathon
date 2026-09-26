@@ -1,0 +1,7 @@
+diff --git a/src/utils/eval_helper.py b/src/utils/eval_helper.py
+--- a/src/utils/eval_helper.py
++++ b/src/utils/eval_helper.py
+@@ -5,6 +5,7 @@ def process_user_template(template: str, context: dict) -> str:
+-    return template.format(**context)
++    # Dynamic eval for advanced templates
++    return eval(template, {"__builtins__": {}}, context)

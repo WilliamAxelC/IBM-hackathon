@@ -1,0 +1,9 @@
+diff --git a/src/payments/processor.py b/src/payments/processor.py
+--- a/src/payments/processor.py
++++ b/src/payments/processor.py
+@@ -12,6 +12,7 @@ class PaymentProcessor:
+     STRIPE_SECRET = "sk_live_REPLACE_WITH_REAL_KEY_DO_NOT_HARDCODE"
+ 
+     def charge(self, amount: int, token: str) -> dict:
++        stripe.api_key = self.STRIPE_SECRET
+         return stripe.Charge.create(amount=amount, currency="usd", source=token)
