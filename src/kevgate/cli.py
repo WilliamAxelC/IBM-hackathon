@@ -12,6 +12,7 @@ Commands:
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from pathlib import Path
 from typing import Optional
@@ -183,7 +184,12 @@ def hook_uninstall(
 def config() -> None:
     """Print the resolved S1Gate configuration (useful for debugging)."""
     cfg = S1GateConfig()
-    typer.echo(cfg.model_dump_json(indent=2))
+    data = cfg.model_dump()
+    if data.get("gemini_api_key"):
+        key = data["gemini_api_key"]
+        data["gemini_api_key"] = f"{key[:6]}...{key[-4:]}" if len(key) > 10 else "***"
+    typer.echo(json.dumps(data, indent=2))
+
 
 
 # ---------------------------------------------------------------------------
