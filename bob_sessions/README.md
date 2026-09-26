@@ -75,11 +75,10 @@ Use the table below to track all recorded sessions as your team completes develo
 
 | Task # | File Name | Workspace | Description / Feature | Captured By | Bobcoins / Consumption | Status |
 | :---: | :--- | :--- | :--- | :--- | :--- | :---: |
-| 01 | `<team>_task01_<desc>_summary.png` | Workspace 1 | Initial architecture & /init | — | — | ⏳ Pending |
-| 02 | `<team>_task02_<desc>_summary.png` | Workspace 1 | Core workflow implementation | — | — | ⏳ Pending |
-| 03 | `<team>_task03_<desc>_summary.png` | Workspace 1 | Agent Mode / Subagent task | — | — | ⏳ Pending |
-| 04 | `<team>_task04_<desc>_summary.png` | Workspace 1 | Automated testing / validation | — | — | ⏳ Pending |
-| 05 | `<team>_task05_<desc>_summary.png` | Workspace 1 | Final review & documentation | — | — | ⏳ Pending |
+| 01 | `s1gate_task01_architecture_audit.png` | IBM-hackathon | Architecture & Security Audit of S1Gate | WilliamAxelC | 156.8k tokens / 14.69 Bobcoins | ✅ Verified |
+| 02 | `s1gate_task02_implementation_subtasks.png` | IBM-hackathon | Benchmark validation (72/72 passed) & Sub-tasks execution | WilliamAxelC | Agent Mode execution | ✅ Verified |
+| 03 | `s1gate_agent_orchestration_menu.png` | IBM-hackathon | Multi-agent orchestration menu (Bob, Bob Shell) | WilliamAxelC | UI inspection | ✅ Verified |
+
 
 ---
 
