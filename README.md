@@ -10,6 +10,7 @@
 
 All official rules, guides, and architectural blueprints have been converted and indexed locally for the project:
 
+- 🏛️ [**System Architecture & Technical Specification**](ARCHITECTURE.md): Universal System-1 decision gate, LM Studio / Kev-4B integration, cross-harness MCP protocol (Bob, Claude Code, Agrav, Kiro, Codex, DeepSeek), and Actor-Critic verification loop.
 - 📘 [**Full Hackathon Guide**](docs/HACKATHON_GUIDE.md): Complete guide covering Bob IDE installation, configuration, features (Agent mode, subagents, MCP, custom rules, literate coding), hands-on exercises, and official documentation links.
 - 📢 [**Kickoff Announcement & Critical Rules**](docs/KICKOFF_ANNOUNCEMENT.md): The official kickoff announcement detailing deadlines, prize breakdown ($12,000 pool), Bobcoins budgeting, and the 3 eligibility rules.
 - 💡 [**Challenge Tracks & Implementation Guide**](docs/USE_CASES_AND_IDEAS.md): Detailed architectural breakdowns of the 5 recommended developer workflow use cases (Onboarding, Code Review, Testing, Release Readiness, Legacy Modernization).
