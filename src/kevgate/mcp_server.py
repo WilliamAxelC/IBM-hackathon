@@ -77,7 +77,7 @@ async def _triage(diff: str, context: Optional[str] = None):
 
     # FAST PATH 1: Instant short-circuit on high-entropy secrets / credentials (< 0.05ms)
     if secret_findings:
-        target_f = chunks[0].file_b if chunks else None
+        target_f = chunks[0].file_path if chunks else None
         first_s = secret_findings[0]
         elapsed = round((time.perf_counter() - t0) * 1000, 2)
         payload = DecisionPayload(
