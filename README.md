@@ -1,8 +1,9 @@
 # S1Gate — Universal System-1 Decision Layer for Agentic Coding Harnesses
 
-> **Event**: IBM Bob 2.0 Hackathon (Hosted on lablab.ai)  
-> **Repository**: [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)  
+> **Event**: IBM Bob 2.0 Hackathon (Hosted on lablab.ai)
+> **Repository**: [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)
 > **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md) | **Hackathon Guide**: [HACKATHON_GUIDE.md](HACKATHON_GUIDE.md) | **Bob Sessions**: [bob_sessions/](bob_sessions/)
+> **Team**: WilliamAxelC (william-dev) · Raja (raja-dev)
 
 ---
 
@@ -73,10 +74,14 @@ Judges can connect directly to a live, hosted **S1Gate MCP Server** without inst
 git clone https://github.com/WilliamAxelC/IBM-hackathon.git
 cd IBM-hackathon
 
-# Create virtual environment and install dependencies
-uv venv .venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+# Install uv (one-time, if not already installed)
+# Windows PowerShell:
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+# macOS / Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Python + all dependencies in one command (uses uv.lock for exact versions)
+uv sync
 ```
 
 ### 2. Configure Environment (`.env`)
@@ -104,25 +109,38 @@ GEMINI_API_KEY=your_actual_gemini_api_key_here
 #### Manual Diff Check
 ```bash
 # Evaluate current staged git changes
-s1gate check
+uv run s1gate check
 
 # Or evaluate a specific diff file directly
-s1gate check --diff tests/fixtures/sql_injection.diff
+uv run s1gate check --diff src/kevgate/benchmarks/true_positives/01_sql_injection.diff
+
+# Force a specific backend
+uv run s1gate check --backend gemini
+uv run s1gate check --backend lmstudio
 ```
 
 #### Install Git Pre-Commit Hook
 ```bash
 # Install automatic pre-commit hook into .git/hooks/pre-commit
-s1gate hook install
+uv run s1gate hook install
 
 # Every git commit is now automatically guarded by S1Gate!
 # To remove:
-s1gate hook uninstall
+uv run s1gate hook uninstall
 ```
 
 #### Inspect Active Configuration
 ```bash
-s1gate config
+uv run s1gate config
+# Example output:
+# {
+#   "backend": "gemini",
+#   "gemini_api_key": "AIzaSy...key4",
+#   "gemini_model": "gemini-3.5-flash-lite",
+#   "block_threshold": 70,
+#   "warn_threshold": 30,
+#   "offline_behavior": "warn"
+# }
 ```
 
 ---
@@ -197,11 +215,14 @@ python -m kevgate.benchmarks.benchmark_harness --dataset standard
 ## 🧪 Running Tests
 
 ```bash
-# Run unit tests
-pytest tests/ -v
+# Run all 64 unit tests (no API key required — fully mocked)
+uv run pytest tests/ -v
 
-# Run benchmark suite (mock mode)
-pytest src/kevgate/benchmarks/ --mock -v
+# Run benchmark suite against a specific diff file
+uv run python -m kevgate.benchmarks.benchmark_harness --dataset hard
+
+# Run standard benchmark suite
+uv run python -m kevgate.benchmarks.benchmark_harness --dataset standard
 ```
 
 ---
@@ -230,8 +251,18 @@ IBM-hackathon/
 
 ---
 
+## 👥 Team
+
+| Member | Branch | Contribution |
+| :--- | :--- | :--- |
+| **WilliamAxelC** | `william-dev` | Core engine, Gemini backend, SSE MCP server, benchmark harness, Bob IDE sessions |
+| **Raja** | `raja-dev` | Demo script, submission polish, checklist, documentation review |
+
+---
+
 ## ⚠️ Hackathon Eligibility & Deliverables
 
 - **IBM Bob IDE Evidence**: Verifiable task session screenshots captured in [`bob_sessions/`](bob_sessions/).
 - **Data Compliance**: 100% synthetic and permissible benchmark diffs; zero proprietary or PII data.
 - **Full Architecture**: Documented in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+- **64/64 tests passing** — run `uv run pytest tests/ -v` to verify.

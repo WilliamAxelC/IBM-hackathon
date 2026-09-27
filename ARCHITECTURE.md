@@ -333,3 +333,31 @@ IBM-hackathon/
             ├── true_positives/      # SQLi, exposed secrets, breaking schema
             └── false_positives/     # Tricky safe diffs, mock fixtures, formatting
 ```
+
+---
+
+## 9. Team & Branch Contributions
+
+| Branch | Author | Work Covered |
+| :--- | :--- | :--- |
+| `main` | WilliamAxelC | Initial scaffold: KevGate concept, LM Studio client, entropy scanner, diff parser, policy engine, MCP server (stdio), CLI, git hook manager, ARCHITECTURE.md |
+| `william-dev` | WilliamAxelC | S1Gate rebrand, Gemini dual-backend, SSE remote MCP server, Docker deployment, benchmark harness (40 diffs), error matrix, Bob IDE session evidence |
+| `raja-dev` | Raja | README installation polish (`uv sync`), team section, demo video script ([`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)), submission checklist completion, ARCHITECTURE contribution log |
+
+### How to Reproduce the Full Environment
+
+```bash
+# Clone & switch to raja-dev (includes all william-dev work)
+git clone https://github.com/WilliamAxelC/IBM-hackathon.git
+cd IBM-hackathon
+git checkout raja-dev
+
+# One-command install (Python + all deps locked via uv.lock)
+uv sync
+
+# Verify all 64 tests pass
+uv run pytest tests/ -v
+
+# Run S1Gate on a risky diff
+uv run s1gate check --diff src/kevgate/benchmarks/true_positives/01_sql_injection.diff
+```

@@ -172,28 +172,41 @@ The judging panel verifies Bob usage by inspecting the [`bob_sessions/`](bob_ses
 
 Before the submission deadline closes, complete every item:
 
-- [ ] **GitHub Repository**:
-  - [ ] Publicly accessible.
-  - [ ] [`README.md`](README.md) with comprehensive setup instructions, architecture diagram, and demo flow.
-  - [ ] [`ARCHITECTURE.md`](ARCHITECTURE.md) detailing technical design and workflow.
-  - [ ] [`.env.example`](.env.example) documenting API keys and settings (ensure `.env` is **never committed**).
-  - [ ] [`bob_sessions/`](bob_sessions/) directory containing at least 2–4 verified task session screenshots.
+- [x] **GitHub Repository**:
+  - [x] Publicly accessible — [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)
+  - [x] [`README.md`](README.md) with comprehensive setup instructions, architecture diagram, and demo flow.
+  - [x] [`ARCHITECTURE.md`](ARCHITECTURE.md) detailing technical design and workflow.
+  - [x] [`.env.example`](.env.example) documenting API keys and settings (`.env` is in `.gitignore` — never committed).
+  - [x] [`bob_sessions/`](bob_sessions/) directory — **9 verified screenshots** captured (tasks 01–03 + budget tracker + error matrix).
+  - [x] `uv.lock` committed — reproducible installs via `uv sync`.
+  - [x] 64/64 unit tests passing (`uv run pytest tests/ -v`).
 - [ ] **Demonstration Video**:
   - [ ] Length: **3 to 5 minutes** (Strict: avoid going over 5 minutes).
   - [ ] Uploaded to YouTube (Unlisted or Public) or Loom.
-  - [ ] **Structure**:
-    1. *The Problem* (30s): LLM coding agents burn tokens on bad diffs, security vulnerabilities, and runaway loops.
-    2. *The Solution* (60s): Fast System-1 pre-commit decision gating (S1Gate) via universal MCP.
-    3. *Live Demo* (120s): Show Bob IDE / Bob Shell hitting the gate, catching bad code, and passing safe commits.
-    4. *Business Impact & Tech Value* (30s): 10x token savings, local GPU execution, multi-harness compatibility.
+  - [x] **Script ready** — see [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for full structured script.
+  - [ ] **Structure** *(follow script)*:
+    1. *The Problem* (0:00–0:30): LLM coding agents burn tokens on bad diffs, security vulnerabilities, and runaway loops.
+    2. *The Solution* (0:30–1:30): Fast System-1 pre-commit decision gating (S1Gate) via universal MCP.
+    3. *Live Demo* (1:30–3:30): Show Bob IDE / Bob Shell hitting the gate, catching bad code, and passing safe commits.
+    4. *Business Impact & Benchmarks* (3:30–4:00): 0% Type II escape rate, 100% accuracy on 40 diffs, 10x token savings.
 - [ ] **Lablab.ai Submission Form**:
-  - [ ] Project Title & Tagline.
+  - [ ] Project Title: **S1Gate — Universal System-1 Pre-Commit Decision Gate**
+  - [ ] Tagline: *"Stop burning Bobcoins on safe commits. S1Gate triages every diff in <150ms."*
   - [ ] Problem Statement & Solution description.
   - [ ] Link to public GitHub repository.
   - [ ] Link to demonstration video.
-  - [ ] Technologies used (IBM Bob 2.0, MCP, Python, Gemini 2.0 Flash Lite, LM Studio, etc.).
+  - [ ] Technologies: IBM Bob 2.0, MCP (Model Context Protocol), Python 3.11, Google Gemini 3.5 Flash Lite, LM Studio, Shannon Entropy Analysis, uv, pytest.
 - [ ] **Post-Submission**:
   - [ ] Complete the official participant feedback survey to qualify for the 20 × $100 reward pool.
+
+### 👤 Raja's Tasks (raja-dev branch)
+- [x] Reviewed all of William's `william-dev` work and merged into `raja-dev`
+- [x] Fixed README — install instructions, `uv sync`, added team section
+- [x] Created [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — full 4-min structured video script
+- [x] Updated this submission checklist with current completion status
+- [ ] Record the demo video following [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- [ ] Upload video to YouTube/Loom and add URL to Lablab.ai form
+- [ ] Submit on Lablab.ai before deadline
 
 ---
 
