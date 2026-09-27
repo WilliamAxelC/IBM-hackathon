@@ -47,6 +47,7 @@ import json
 import os
 import re
 import sys
+import time
 from typing import Any, Callable, Optional
 from urllib.parse import parse_qs
 
@@ -75,6 +76,8 @@ class APIKeyAuthMiddleware:
             await self.app(scope, receive, send)
             return
 
+        start_time = time.perf_counter()
+
         req_headers = dict(scope.get("headers", []))
         prefix = req_headers.get(b"x-forwarded-prefix", b"").decode("latin1").strip().rstrip("/")
         if not prefix:
@@ -99,6 +102,7 @@ class APIKeyAuthMiddleware:
                 (b"access-control-allow-origin", b"*"),
                 (b"access-control-allow-methods", b"GET, POST, OPTIONS"),
                 (b"access-control-allow-headers", b"Authorization, Content-Type, X-API-Key, Accept, Last-Event-ID, Cache-Control, X-Requested-With, Origin"),
+                (b"access-control-expose-headers", b"X-Response-Time, X-Response-Time-Ms, X-Processing-Time-Ms"),
                 (b"access-control-max-age", b"86400"),
                 (b"content-length", b"0"),
             ]
@@ -109,6 +113,7 @@ class APIKeyAuthMiddleware:
         # 2. Public health check endpoint
         if path in ("/health", "/"):
             config = S1GateConfig()
+            elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
             body = json.dumps({
                 "status": "healthy",
                 "service": "S1Gate Remote MCP Server",
@@ -117,11 +122,16 @@ class APIKeyAuthMiddleware:
                 "model": config.gemini_model if config.backend == "gemini" else config.lmstudio_model,
                 "auth_required": bool(self.required_api_key),
                 "active_sessions": len(self.authenticated_sessions),
+                "processing_time_ms": elapsed_ms,
             }).encode("utf-8")
             resp_headers = [
                 (b"content-type", b"application/json"),
                 (b"content-length", str(len(body)).encode("ascii")),
                 (b"access-control-allow-origin", b"*"),
+                (b"access-control-expose-headers", b"X-Response-Time, X-Response-Time-Ms, X-Processing-Time-Ms"),
+                (b"x-response-time", f"{elapsed_ms}ms".encode("latin1")),
+                (b"x-response-time-ms", str(elapsed_ms).encode("latin1")),
+                (b"x-processing-time-ms", str(elapsed_ms).encode("latin1")),
             ]
             await send({"type": "http.response.start", "status": 200, "headers": resp_headers})
             await send({"type": "http.response.body", "body": body})
@@ -165,18 +175,24 @@ class APIKeyAuthMiddleware:
                 await send({"type": "http.response.body", "body": err_body})
                 return
 
-        # 4. Intercept send to track session IDs and inject Cloudflare SSE headers
+        # 4. Intercept send to track session IDs and inject Cloudflare SSE headers & processing time
         async def wrapped_send(message: dict) -> None:
             if message["type"] == "http.response.start":
-                # Inject Cloudflare-friendly no-buffer headers & CORS on responses
+                elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                # Inject Cloudflare-friendly no-buffer headers, CORS & processing time on responses
                 orig_headers = list(message.get("headers", []))
                 existing = {h[0].lower() for h in orig_headers}
                 if b"access-control-allow-origin" not in existing:
                     orig_headers.append((b"access-control-allow-origin", b"*"))
                 if b"access-control-allow-methods" not in existing:
                     orig_headers.append((b"access-control-allow-methods", b"GET, POST, OPTIONS"))
+                if b"access-control-expose-headers" not in existing:
+                    orig_headers.append((b"access-control-expose-headers", b"X-Response-Time, X-Response-Time-Ms, X-Processing-Time-Ms"))
                 if b"x-accel-buffering" not in existing:
                     orig_headers.append((b"x-accel-buffering", b"no"))
+                orig_headers.append((b"x-response-time", f"{elapsed_ms}ms".encode("latin1")))
+                orig_headers.append((b"x-response-time-ms", str(elapsed_ms).encode("latin1")))
+                orig_headers.append((b"x-processing-time-ms", str(elapsed_ms).encode("latin1")))
                 # Ensure Cloudflare does not transform or buffer SSE chunks
                 orig_headers = [h for h in orig_headers if h[0].lower() != b"cache-control"]
                 orig_headers.append((b"cache-control", b"no-cache, no-transform, no-store"))

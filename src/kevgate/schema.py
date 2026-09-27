@@ -34,6 +34,7 @@ class DecisionPayload(BaseModel):
     target_lines: Optional[str] = None
     remediation_hint: Optional[str] = None
     trigger_agent: bool = Field(description="Definitive decision to invoke System-2 Agent")
+    processing_time_ms: Optional[float] = Field(default=None, description="Processing latency in milliseconds")
 
     @model_validator(mode="after")
     def validate_trigger_agent_implies_high_risk(self) -> "DecisionPayload":
@@ -51,6 +52,7 @@ class RemediationVerification(BaseModel):
     new_score: int = Field(ge=0, le=100, description="Risk score of the remediated patch")
     delta: int = Field(description="Score change (new_score - previous_score, negative = improvement)")
     message: str = Field(description="Human-readable verdict message")
+    processing_time_ms: Optional[float] = Field(default=None, description="Processing latency in milliseconds")
 
     @model_validator(mode="after")
     def validate_delta_consistency(self) -> "RemediationVerification":

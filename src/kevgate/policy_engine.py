@@ -134,6 +134,7 @@ def format_gate_result(
     payload: DecisionPayload,
     secret_findings_count: int = 0,
     use_color: bool = True,
+    processing_time_ms: Optional[float] = None,
 ) -> str:
     """
     Format the gate result as a human-readable string for CLI output.
@@ -150,10 +151,13 @@ def format_gate_result(
 
     badge = {"PASS": "[PASS]", "WARN": "[WARN]", "BLOCK": "[BLOCK]"}[decision.value]
 
+    latency = processing_time_ms if processing_time_ms is not None else payload.processing_time_ms
+    latency_str = f"  (latency: {latency:.1f}ms)" if latency is not None else ""
+
     lines = [
         f"{color}+-- S1Gate {badge} --+{end}",
         f"  Category   : {payload.category}",
-        f"  Risk Score : {payload.risk_score}/100  (confidence: {payload.confidence:.0%})",
+        f"  Risk Score : {payload.risk_score}/100  (confidence: {payload.confidence:.0%}){latency_str}",
         f"  Summary    : {payload.summary}",
     ]
 

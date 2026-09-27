@@ -68,7 +68,7 @@ class S1GateConfig(BaseSettings):
         description="Google Gemini API key (loaded from GEMINI_API_KEY in .env)",
     )
     gemini_model: str = Field(
-        default="gemini-3.5-flash-lite",
+        default="gemini-3.1-flash-lite",
         description="Google Gemini model identifier for System-1 triage",
     )
 
