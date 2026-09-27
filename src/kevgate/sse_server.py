@@ -75,8 +75,23 @@ class APIKeyAuthMiddleware:
             await self.app(scope, receive, send)
             return
 
-        method = scope.get("method", "GET").upper()
+        req_headers = dict(scope.get("headers", []))
+        prefix = req_headers.get(b"x-forwarded-prefix", b"").decode("latin1").strip().rstrip("/")
+        if not prefix:
+            prefix = os.getenv("S1GATE_BASE_PATH", "").strip().rstrip("/")
+        if prefix:
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            scope["root_path"] = prefix
+
         path = scope.get("path", "")
+        # If path starts with prefix (e.g. reverse proxy without path rewrite), strip it for Starlette
+        if prefix and path.startswith(prefix):
+            stripped = path[len(prefix):]
+            scope["path"] = stripped if stripped.startswith("/") else ("/" + stripped if stripped else "/")
+            path = scope["path"]
+
+        method = scope.get("method", "GET").upper()
 
         # 1. Handle CORS preflight OPTIONS requests for Cloudflare & browser MCP clients
         if method == "OPTIONS":
@@ -103,20 +118,19 @@ class APIKeyAuthMiddleware:
                 "auth_required": bool(self.required_api_key),
                 "active_sessions": len(self.authenticated_sessions),
             }).encode("utf-8")
-            headers = [
+            resp_headers = [
                 (b"content-type", b"application/json"),
                 (b"content-length", str(len(body)).encode("ascii")),
                 (b"access-control-allow-origin", b"*"),
             ]
-            await send({"type": "http.response.start", "status": 200, "headers": headers})
+            await send({"type": "http.response.start", "status": 200, "headers": resp_headers})
             await send({"type": "http.response.body", "body": body})
             return
 
         # 3. Authentication verification
         if self.required_api_key:
-            headers = dict(scope.get("headers", []))
-            auth_header = headers.get(b"authorization", b"").decode("latin1").strip()
-            x_api_key = headers.get(b"x-api-key", b"").decode("latin1").strip()
+            auth_header = req_headers.get(b"authorization", b"").decode("latin1").strip()
+            x_api_key = req_headers.get(b"x-api-key", b"").decode("latin1").strip()
             query_string = scope.get("query_string", b"").decode("latin1")
             params = parse_qs(query_string)
             query_key = params.get("api_key", [None])[0] or params.get("token", [None])[0]

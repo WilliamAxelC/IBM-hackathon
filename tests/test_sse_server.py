@@ -211,3 +211,44 @@ async def test_full_mcp_client_with_cloudflare_reverse_proxy_headers(sse_test_se
             assert "s1gate_inspect_file" in tool_names
             assert "s1gate_verify_remediation" in tool_names
 
+
+def test_reverse_proxy_subpath_prefix(sse_test_server):
+    """When behind reverse proxy with X-Forwarded-Prefix: /s1gate, SSE endpoint must emit /s1gate/messages/."""
+    base_url, api_key = sse_test_server
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "X-Forwarded-Prefix": "/s1gate",
+        "X-Forwarded-Proto": "https",
+        "Host": "mcp.cuang.dev",
+    }
+    with httpx.Client() as client:
+        with client.stream("GET", f"{base_url}/sse", headers=headers) as response:
+            assert response.status_code == 200
+            for line in response.iter_lines():
+                if line.startswith("data:"):
+                    assert "/s1gate/messages/?session_id=" in line
+                    break
+
+
+def test_direct_subpath_routing_and_health(sse_test_server):
+    """Requests using /s1gate/health or /s1gate/sse directly should route cleanly."""
+    base_url, api_key = sse_test_server
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "X-Forwarded-Prefix": "/s1gate",
+    }
+    with httpx.Client() as client:
+        # 1. Subpath health
+        h_resp = client.get(f"{base_url}/s1gate/health", headers=headers)
+        assert h_resp.status_code == 200
+        assert h_resp.json()["status"] == "healthy"
+
+        # 2. Subpath SSE
+        with client.stream("GET", f"{base_url}/s1gate/sse", headers=headers) as sse_resp:
+            assert sse_resp.status_code == 200
+            for line in sse_resp.iter_lines():
+                if line.startswith("data:"):
+                    assert "/s1gate/messages/?session_id=" in line
+                    break
+
+

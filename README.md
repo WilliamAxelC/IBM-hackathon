@@ -246,8 +246,38 @@ IBM-hackathon/
     ├── policy_engine.py                # Asymmetric risk threshold evaluation
     ├── cli.py                          # s1gate CLI commands
     ├── mcp_server.py                   # Universal MCP server (stdio)
+    ├── sse_server.py                   # Hosted Remote MCP SSE server (HTTP / Cloudflare)
     └── benchmarks/                     # 20 true positive / false positive diff suites
 ```
+
+---
+
+## 🌐 Hosted Remote MCP Server for Evaluators & Judges
+
+S1Gate is deployed as a 24/7 high-availability hosted MCP server proxied via NGINX and Cloudflare Tunnel:
+
+- **Public MCP SSE URL**: `https://mcp.cuang.dev/s1gate/sse`
+- **Public Messages URL**: `https://mcp.cuang.dev/s1gate/messages/`
+- **Public Health Check**: `https://mcp.cuang.dev/s1gate/health`
+- **Gateway Discovery Catalog**: `https://mcp.cuang.dev/discovery`
+- **Internal Port**: `8000` (Docker container `s1gate-remote-mcp`)
+- **Authentication**: Bearer Token, `X-API-Key`, or URL query parameter `?api_key=<KEY>`
+
+### Connecting IBM Bob IDE to Hosted S1Gate:
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://mcp.cuang.dev/s1gate/sse",
+      "headers": {
+        "Authorization": "Bearer <JUDGE_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Detailed evaluator setup instructions are available in [docs/JUDGE_REMOTE_MCP_GUIDE.md](docs/JUDGE_REMOTE_MCP_GUIDE.md).
 
 ---
 
@@ -265,4 +295,5 @@ IBM-hackathon/
 - **IBM Bob IDE Evidence**: Verifiable task session screenshots captured in [`bob_sessions/`](bob_sessions/).
 - **Data Compliance**: 100% synthetic and permissible benchmark diffs; zero proprietary or PII data.
 - **Full Architecture**: Documented in [`ARCHITECTURE.md`](ARCHITECTURE.md).
-- **64/64 tests passing** — run `uv run pytest tests/ -v` to verify.
+- **74/74 tests passing** — run `uv run pytest tests/ -v` to verify.
+
