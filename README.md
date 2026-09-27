@@ -37,16 +37,18 @@ S1Gate supports two interchangeable backends:
 
 | Backend | Mode | Speed | Setup | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`gemini` (Default for MVP)** | Cloud API | **~100–350ms** | Free API key in `.env` (`gemini-3.5-flash-lite`) | Instant setup, zero local GPU requirements, CI/CD |
+| **`gemini` (Default for MVP)** | Cloud API | **~1.2–1.8s** | Free API key in `.env` (`gemini-3.1-flash-lite`) | Instant setup, zero local GPU requirements, CI/CD |
 | **`lmstudio`** | Local GPU | **~50–80ms** | Local LM Studio on `localhost:1234` | 100% offline air-gapped privacy (AMD RX 6600 XT, NVIDIA) |
 
 ---
 
 ## 🌐 Hosted Remote MCP Server for Hackathon Judges
 
-Judges can connect directly to a live, hosted **S1Gate MCP Server** without installing Python or cloning this repository locally!
+Judges can connect directly to a live, hosted **S1Gate MCP Server** over the public internet without installing Python or cloning this repository locally!
 
-- **Hosted SSE Endpoint**: `http://10.20.20.11:8000/sse`
+- **Hosted SSE Endpoint**: `https://mcp.cuang.dev/s1gate/sse`
+- **Hosted Messages Endpoint**: `https://mcp.cuang.dev/s1gate/messages/`
+- **Public Health Check**: `https://mcp.cuang.dev/s1gate/health`
 - **Security**: Protected via API Key (`Authorization: Bearer <JUDGE_KEY>` or `?api_key=<JUDGE_KEY>`).
 - **Complete Evaluator Guide**: See [docs/JUDGE_REMOTE_MCP_GUIDE.md](docs/JUDGE_REMOTE_MCP_GUIDE.md).
 
@@ -54,7 +56,7 @@ Judges can connect directly to a live, hosted **S1Gate MCP Server** without inst
 {
   "mcpServers": {
     "s1gate": {
-      "url": "http://10.20.20.11:8000/sse",
+      "url": "https://mcp.cuang.dev/s1gate/sse",
       "headers": {
         "Authorization": "Bearer <JUDGE_KEY>"
       }
