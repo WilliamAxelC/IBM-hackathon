@@ -48,6 +48,7 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import parse_qs
 
@@ -110,7 +111,24 @@ class APIKeyAuthMiddleware:
             await send({"type": "http.response.body", "body": b""})
             return
 
-        # 2. Public health check endpoint
+        # 2. Interactive Web Playground (for browsers visiting / or /playground)
+        accept_hdr = req_headers.get(b"accept", b"").decode("latin1").lower()
+        if method == "GET" and (path in ("/", "/index.html", "/playground", "") and ("text/html" in accept_hdr or path != "/")):
+            html_file = Path(__file__).parent / "playground.html"
+            if html_file.exists():
+                html_bytes = html_file.read_bytes()
+                elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                resp_headers = [
+                    (b"content-type", b"text/html; charset=utf-8"),
+                    (b"content-length", str(len(html_bytes)).encode("ascii")),
+                    (b"access-control-allow-origin", b"*"),
+                    (b"x-response-time-ms", str(elapsed_ms).encode("latin1")),
+                ]
+                await send({"type": "http.response.start", "status": 200, "headers": resp_headers})
+                await send({"type": "http.response.body", "body": html_bytes})
+                return
+
+        # 3. Public health check endpoint
         if path in ("/health", "/"):
             config = S1GateConfig()
             elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -136,6 +154,69 @@ class APIKeyAuthMiddleware:
             await send({"type": "http.response.start", "status": 200, "headers": resp_headers})
             await send({"type": "http.response.body", "body": body})
             return
+
+        # 4. Interactive Playground Triage API (POST /api/triage)
+        if method == "POST" and path in ("/api/triage", "/s1gate/api/triage"):
+            body_chunks = []
+            while True:
+                msg = await receive()
+                if msg["type"] == "http.request":
+                    body_chunks.append(msg.get("body", b""))
+                    if not msg.get("more_body", False):
+                        break
+            raw_body = b"".join(body_chunks).decode("utf-8", errors="replace")
+            try:
+                req_data = json.loads(raw_body) if raw_body else {}
+                diff_text = req_data.get("diff", "")
+                user_key = req_data.get("api_key", "")
+                auth_hdr = req_headers.get(b"authorization", b"").decode("latin1").strip()
+                if auth_hdr.lower().startswith("bearer "):
+                    user_key = auth_hdr[7:].strip()
+
+                if self.required_api_key and user_key != self.required_api_key:
+                    err_resp = json.dumps({"error": "Unauthorized", "message": "Invalid API key"}).encode("utf-8")
+                    await send({"type": "http.response.start", "status": 401, "headers": [
+                        (b"content-type", b"application/json"),
+                        (b"access-control-allow-origin", b"*"),
+                    ]})
+                    await send({"type": "http.response.body", "body": err_resp})
+                    return
+
+                from kevgate.mcp_server import _triage
+                payload, decision, findings = await _triage(diff_text)
+                elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                res_dict = {
+                    "decision": decision.value,
+                    "risk_score": payload.risk_score,
+                    "confidence": payload.confidence,
+                    "category": payload.category,
+                    "summary": payload.summary,
+                    "remediation_hint": payload.remediation_hint,
+                    "is_breaking_change": payload.is_breaking_change,
+                    "exposes_unprotected_resource": payload.exposes_unprotected_resource,
+                    "unhandled_failure_mode": payload.unhandled_failure_mode,
+                    "processing_time_ms": payload.processing_time_ms or elapsed_ms,
+                    "target_file": payload.target_file,
+                    "target_lines": payload.target_lines,
+                    "secrets_caught": len(findings),
+                }
+                out_bytes = json.dumps(res_dict).encode("utf-8")
+                await send({"type": "http.response.start", "status": 200, "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(out_bytes)).encode("ascii")),
+                    (b"access-control-allow-origin", b"*"),
+                    (b"x-processing-time-ms", str(elapsed_ms).encode("latin1")),
+                ]})
+                await send({"type": "http.response.body", "body": out_bytes})
+                return
+            except Exception as e:
+                err_bytes = json.dumps({"error": "TriageError", "message": str(e)}).encode("utf-8")
+                await send({"type": "http.response.start", "status": 500, "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"access-control-allow-origin", b"*"),
+                ]})
+                await send({"type": "http.response.body", "body": err_bytes})
+                return
 
         # 3. Authentication verification
         if self.required_api_key:

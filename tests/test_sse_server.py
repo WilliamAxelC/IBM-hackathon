@@ -252,3 +252,47 @@ def test_direct_subpath_routing_and_health(sse_test_server):
                     break
 
 
+def test_web_playground_html_serving(sse_test_server):
+    """When a browser requests / with Accept: text/html, it should receive the interactive playground."""
+    base_url, _ = sse_test_server
+    headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
+    with httpx.Client() as client:
+        # Browser visiting root
+        resp = client.get(f"{base_url}/", headers=headers)
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert "S1Gate Playground" in resp.text
+        assert "Run S1Gate Triage" in resp.text
+
+        # Browser visiting /playground
+        p_resp = client.get(f"{base_url}/playground")
+        assert p_resp.status_code == 200
+        assert "text/html" in p_resp.headers["content-type"]
+        assert "S1Gate Playground" in p_resp.text
+
+
+def test_playground_api_triage_endpoint(sse_test_server):
+    """Test POST /api/triage used by the web playground."""
+    base_url, api_key = sse_test_server
+    headers = {"Authorization": f"Bearer {api_key}"}
+
+    secret_diff = (
+        "--- a/config.py\n"
+        "+++ b/config.py\n"
+        "@@ -1,1 +1,2 @@\n"
+        "+AWS_KEY = 'AKIAIOSFODNN7EXAMPLE'\n"
+    )
+    with httpx.Client() as client:
+        resp = client.post(
+            f"{base_url}/api/triage",
+            json={"diff": secret_diff, "api_key": api_key},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["decision"] == "BLOCK"
+        assert data["risk_score"] >= 90
+        assert "processing_time_ms" in data
+        assert data["secrets_caught"] >= 1
+
+
