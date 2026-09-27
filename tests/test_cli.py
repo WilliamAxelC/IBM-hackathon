@@ -133,3 +133,38 @@ class TestConfigCommand:
         assert "lmstudio_base_url" in data
         assert "block_threshold" in data
         assert "offline_behavior" in data
+
+
+class TestMcpCommand:
+    def test_mcp_help(self):
+        result = runner.invoke(app, ["mcp", "--help"])
+        assert result.exit_code == 0
+        assert "stdio" in result.output
+        assert "sse" in result.output
+
+    def test_mcp_stdio_invocation(self):
+        with patch("kevgate.mcp_server.server.run_stdio_async", new_callable=AsyncMock) as mock_stdio:
+            result = runner.invoke(app, ["mcp", "--transport", "stdio"])
+            assert result.exit_code == 0
+            mock_stdio.assert_called_once()
+
+    def test_mcp_invalid_transport(self):
+        result = runner.invoke(app, ["mcp", "--transport", "invalid-transport"])
+        assert result.exit_code == 1
+        assert "Unsupported transport" in result.output
+
+
+class TestServeCommand:
+    def test_serve_help(self):
+        result = runner.invoke(app, ["serve", "--help"])
+        assert result.exit_code == 0
+        assert "--port" in result.output
+
+    def test_serve_invocation(self):
+        with patch("uvicorn.run") as mock_uvicorn:
+            result = runner.invoke(app, ["serve", "--port", "9999", "--api-key", "test-key"])
+            assert result.exit_code == 0
+            mock_uvicorn.assert_called_once()
+            args, kwargs = mock_uvicorn.call_args
+            assert kwargs.get("port") == 9999
+

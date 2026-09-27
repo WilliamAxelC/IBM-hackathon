@@ -2,10 +2,13 @@
   "mcpServers": {
     "s1gate": {
       "command": "uv",
-      "args": ["run", "s1gate", "mcp"],
-      "env": {
-        "S1GATE_BACKEND": "gemini"
-      }
+      "args": [
+        "--directory",
+        "/home/agent/orca/IBM-hackathon",
+        "run",
+        "s1gate",
+        "mcp"
+      ]
     },
     "s1gate-remote": {
       "url": "https://mcp.cuang.dev/s1gate/sse",

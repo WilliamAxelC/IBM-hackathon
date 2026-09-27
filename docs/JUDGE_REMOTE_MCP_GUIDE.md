@@ -51,6 +51,12 @@ Judges can authenticate using **any** of the following three methods:
 
 ## 3. Quick Connection Guide for Judges
 
+### Public Production Endpoint
+- **Public MCP SSE URL**: `https://mcp.cuang.dev/s1gate/sse`
+- **Public Messages URL**: `https://mcp.cuang.dev/s1gate/messages/`
+- **Public Health Check**: `https://mcp.cuang.dev/s1gate/health`
+- **Internal Server Port**: `8000` (Reverse-proxied via NGINX & Cloudflare Tunnel)
+
 ### Option A: Connect via IBM Bob IDE
 
 In your workspace, edit or create `.bob/mcp.json` (or global MCP settings):
@@ -59,7 +65,7 @@ In your workspace, edit or create `.bob/mcp.json` (or global MCP settings):
 {
   "mcpServers": {
     "s1gate": {
-      "url": "http://10.20.20.11:8000/sse",
+      "url": "https://mcp.cuang.dev/s1gate/sse",
       "headers": {
         "Authorization": "Bearer <JUDGE_API_KEY>"
       }
@@ -73,7 +79,7 @@ In your workspace, edit or create `.bob/mcp.json` (or global MCP settings):
 {
   "mcpServers": {
     "s1gate": {
-      "url": "http://10.20.20.11:8000/sse?api_key=<JUDGE_API_KEY>"
+      "url": "https://mcp.cuang.dev/s1gate/sse?api_key=<JUDGE_API_KEY>"
     }
   }
 }
@@ -94,7 +100,7 @@ In `~/.config/claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "s1gate": {
-      "url": "http://10.20.20.11:8000/sse",
+      "url": "https://mcp.cuang.dev/s1gate/sse",
       "headers": {
         "Authorization": "Bearer <JUDGE_API_KEY>"
       }
@@ -111,7 +117,7 @@ Verify the remote server in 5 seconds from your terminal:
 
 #### 1. Public Health Check (No Auth Required)
 ```bash
-curl -s http://10.20.20.11:8000/health | jq
+curl -s https://mcp.cuang.dev/s1gate/health | jq
 ```
 *Expected Output:*
 ```json
@@ -121,23 +127,91 @@ curl -s http://10.20.20.11:8000/health | jq
   "version": "0.1.0",
   "backend": "gemini",
   "model": "gemini-3.5-flash-lite",
-  "auth_required": true
+  "auth_required": true,
+  "active_sessions": 0
 }
 ```
 
 #### 2. Test Protected Endpoint with API Key
 ```bash
-curl -N -H "Authorization: Bearer <JUDGE_API_KEY>" http://10.20.20.11:8000/sse
+curl -N -H "Authorization: Bearer <JUDGE_API_KEY>" https://mcp.cuang.dev/s1gate/sse
 ```
 *Expected Output:*
 ```text
 event: endpoint
-data: /messages/?session_id=...
+data: /s1gate/messages/?session_id=...
 ```
 
 ---
 
-## 4. Hosting & Running Your Own S1Gate Instance
+## 4. Reverse Proxy & Infrastructure Topology
+
+S1Gate is served via the production NGINX reverse-proxy gateway and Cloudflare Tunnel:
+- Gateway Host: `mcp.cuang.dev` (routed to `mcp-nginx-gateway` port `8086 -> 80`)
+- Backend: `s1gate_backend` upstream pointing to S1Gate on port `8000`
+- TLS / SSL: Managed automatically by Cloudflare with HTTP/2 and HTTP/3 support
+- Edge Streaming: Unbuffered SSE with `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform, no-store`
+- Discovery Catalog: View all hosted tools at `https://mcp.cuang.dev/discovery`
+
+S1Gate is pre-configured to work behind Cloudflare Tunnels and reverse proxies out-of-the-box.
+
+### Option 1: Instant Cloudflare Tunnel (1-Command)
+
+If you have `cloudflared` installed (or let the script download it), you can launch an instant public HTTPS endpoint in one command:
+
+```bash
+# Launch S1Gate + Cloudflare Tunnel
+./scripts/start_mcp_cloudflare.sh
+```
+
+This starts the server on port 8000 and prints a live public URL:
+```text
+https://alpha-beta-gamma.trycloudflare.com
+```
+
+### Option 2: Manual `cloudflared` Tunnel
+
+If you already have S1Gate running on port 8000:
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+
+### Option 3: Custom Domain via Cloudflare Reverse Proxy (NGINX / Caddy / Cloudflare Rules)
+
+When routing through a Cloudflare-proxied domain (orange-clouded):
+1. **Response Buffering**: S1Gate automatically sends `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform, no-store`. In the Cloudflare dashboard, ensure no caching or buffering rules intercept `/sse`.
+2. **CORS Support**: S1Gate natively responds to `OPTIONS` preflight requests with `204 No Content` and permissive CORS headers.
+3. **Session ID Authorization**: If an agent connects via `https://your-domain.com/sse?api_key=<KEY>`, S1Gate tracks the session ID. Subsequent message dispatches to `/messages/?session_id=<UUID>` remain authorized automatically.
+
+### Configuring Bob IDE / Claude Code with Cloudflare URL
+
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://your-tunnel.trycloudflare.com/sse",
+      "headers": {
+        "Authorization": "Bearer <YOUR_KEY>"
+      }
+    }
+  }
+}
+```
+
+Or via URL query parameter:
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://your-tunnel.trycloudflare.com/sse?api_key=<YOUR_KEY>"
+    }
+  }
+}
+```
+
+---
+
+## 5. Hosting & Running Your Own S1Gate Instance
 
 If judges prefer to host their own instance:
 
@@ -158,7 +232,7 @@ python -m kevgate.sse_server --host 0.0.0.0 --port 8000 --api-key "judge-secret-
 
 ---
 
-## 5. Security & Isolation Guarantees
+## 6. Security & Isolation Guarantees
 
 - **Zero Secret Leakage**: The `/health` endpoint exposes zero keys or credentials.
 - **Pure ASGI Streaming**: SSE connections are streamed natively without response buffering, preventing denial-of-service hangs.

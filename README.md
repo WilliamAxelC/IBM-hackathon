@@ -246,8 +246,59 @@ IBM-hackathon/
     ├── policy_engine.py                # Asymmetric risk threshold evaluation
     ├── cli.py                          # s1gate CLI commands
     ├── mcp_server.py                   # Universal MCP server (stdio)
+    ├── sse_server.py                   # Hosted Remote MCP SSE server (HTTP / Cloudflare)
     └── benchmarks/                     # 20 true positive / false positive diff suites
 ```
+
+---
+
+## 🌐 Model Context Protocol (MCP) Transports: Stdio & SSE
+
+S1Gate natively supports **both** standard MCP transports:
+
+1. **`stdio` (Standard I/O — Local Default)**:
+   - Universal transport for local AI harnesses (**IBM Bob IDE**, **Antigravity**, **Claude Code**, Cursor).
+   - Zero network overhead, zero port exposure.
+   - Run directly: `uv run s1gate mcp` (or `python -m kevgate.mcp_server`).
+
+2. **`sse` (Server-Sent Events — Hosted Remote)**:
+   - 24/7 cloud endpoint proxied via NGINX and Cloudflare Tunnel for evaluators and remote agents.
+   - **Public MCP SSE URL**: `https://mcp.cuang.dev/s1gate/sse`
+   - **Public Messages URL**: `https://mcp.cuang.dev/s1gate/messages/`
+   - **Public Health Check**: `https://mcp.cuang.dev/s1gate/health`
+   - **Gateway Discovery**: `https://mcp.cuang.dev/discovery`
+   - **Internal Port**: `8000` (Docker container `s1gate-remote-mcp`)
+   - **Authentication**: Bearer Token, `X-API-Key`, or URL query parameter `?api_key=<KEY>`.
+
+### Registering in IBM Bob IDE / Antigravity (`mcp.json`):
+
+**Local `stdio` Mode (Recommended for Local Dev):**
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "command": "uv",
+      "args": ["run", "s1gate", "mcp"]
+    }
+  }
+}
+```
+
+**Remote `sse` Mode (Evaluators & Cloud Harnesses):**
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://mcp.cuang.dev/s1gate/sse",
+      "headers": {
+        "Authorization": "Bearer <JUDGE_API_KEY>"
+      }
+    }
+  }
+}
+```
+
+Detailed evaluator setup instructions are available in [docs/JUDGE_REMOTE_MCP_GUIDE.md](docs/JUDGE_REMOTE_MCP_GUIDE.md).
 
 ---
 
@@ -265,4 +316,6 @@ IBM-hackathon/
 - **IBM Bob IDE Evidence**: Verifiable task session screenshots captured in [`bob_sessions/`](bob_sessions/).
 - **Data Compliance**: 100% synthetic and permissible benchmark diffs; zero proprietary or PII data.
 - **Full Architecture**: Documented in [`ARCHITECTURE.md`](ARCHITECTURE.md).
-- **64/64 tests passing** — run `uv run pytest tests/ -v` to verify.
+- **79/79 tests passing** — run `uv run pytest tests/ -v` to verify.
+
+

@@ -1,5 +1,6 @@
 """
 Tests for S1Gate Remote MCP SSE Server & API Key Authentication Middleware.
+Includes verification for Cloudflare Tunnels, reverse proxies, CORS, and session persistence.
 """
 
 from __future__ import annotations
@@ -11,6 +12,8 @@ import time
 import httpx
 import pytest
 import uvicorn
+from mcp.client.session import ClientSession
+from mcp.client.sse import sse_client
 
 from kevgate.sse_server import create_app
 
@@ -27,7 +30,14 @@ def sse_test_server():
     port = find_free_port()
     api_key = "secret-judge-key-12345"
     app = create_app(api_key=api_key)
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    config = uvicorn.Config(
+        app,
+        host="127.0.0.1",
+        port=port,
+        proxy_headers=True,
+        forwarded_allow_ips="*",
+        log_level="error",
+    )
     srv = uvicorn.Server(config)
 
     thread = threading.Thread(target=srv.run, daemon=True)
@@ -60,7 +70,19 @@ def test_public_health_endpoint(sse_test_server):
         assert data["status"] == "healthy"
         assert data["service"] == "S1Gate Remote MCP Server"
         assert data["auth_required"] is True
+        assert "active_sessions" in data
         assert api_key not in str(data)  # Zero secrets leaked
+
+
+def test_cors_options_preflight(sse_test_server):
+    """CORS OPTIONS preflight request must return 204 with permissive headers."""
+    base_url, _ = sse_test_server
+    with httpx.Client() as client:
+        response = client.options(f"{base_url}/sse")
+        assert response.status_code == 204
+        assert response.headers.get("access-control-allow-origin") == "*"
+        assert "POST" in response.headers.get("access-control-allow-methods", "")
+        assert "Authorization" in response.headers.get("access-control-allow-headers", "")
 
 
 def test_unauthorized_access_rejected(sse_test_server):
@@ -86,12 +108,16 @@ def test_unauthorized_access_rejected(sse_test_server):
 
 
 def test_authorized_access_via_bearer(sse_test_server):
-    """Authorized access via Bearer token should connect to SSE endpoint."""
+    """Authorized access via Bearer token should connect to SSE endpoint with Cloudflare headers."""
     base_url, api_key = sse_test_server
     with httpx.Client() as client:
         with client.stream("GET", f"{base_url}/sse", headers={"Authorization": f"Bearer {api_key}"}) as response:
             assert response.status_code == 200
             assert "text/event-stream" in response.headers.get("content-type", "")
+            # Verify Cloudflare no-buffer headers
+            assert response.headers.get("x-accel-buffering") == "no"
+            assert "no-cache" in response.headers.get("cache-control", "")
+            assert response.headers.get("access-control-allow-origin") == "*"
             first_line = next(response.iter_lines())
             assert "event: endpoint" in first_line
 
@@ -116,3 +142,113 @@ def test_authorized_access_via_query_param(sse_test_server):
             assert "text/event-stream" in response.headers.get("content-type", "")
             first_line = next(response.iter_lines())
             assert "event: endpoint" in first_line
+
+
+@pytest.mark.asyncio
+async def test_full_mcp_client_with_query_param_only(sse_test_server):
+    """MCP SDK Client connecting with query param only should discover all tools seamlessly."""
+    base_url, api_key = sse_test_server
+    async with sse_client(f"{base_url}/sse?api_key={api_key}") as streams:
+        async with ClientSession(*streams) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            tool_names = [t.name for t in tools.tools]
+            assert "s1gate_triage_diff" in tool_names
+            assert "s1gate_inspect_file" in tool_names
+            assert "s1gate_verify_remediation" in tool_names
+
+
+def test_cloudflare_reverse_proxy_headers(sse_test_server):
+    """Verify that Cloudflare reverse proxy headers (Host, X-Forwarded-Proto, CF-Connecting-IP) work cleanly."""
+    base_url, api_key = sse_test_server
+    cf_headers = {
+        "Host": "mcp.subdomain.workers.dev",
+        "X-Forwarded-Proto": "https",
+        "CF-Connecting-IP": "198.51.100.24",
+    }
+    with httpx.Client() as client:
+        # 1. Healthcheck with CF headers
+        resp = client.get(f"{base_url}/health", headers=cf_headers)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "healthy"
+        assert api_key not in resp.text
+
+        # 2. CORS preflight with CF headers
+        opt_headers = {
+            **cf_headers,
+            "Origin": "https://mcp.subdomain.workers.dev",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "Authorization, Content-Type, X-API-Key",
+        }
+        opt_resp = client.options(f"{base_url}/sse", headers=opt_headers)
+        assert opt_resp.status_code == 204
+        assert opt_resp.headers.get("access-control-allow-origin") == "*"
+        assert "POST" in opt_resp.headers.get("access-control-allow-methods", "")
+
+        # 3. Case-insensitive bearer auth
+        with client.stream("GET", f"{base_url}/sse", headers={**cf_headers, "Authorization": f"bearer {api_key}"}) as bearer_resp:
+            assert bearer_resp.status_code == 200
+            assert "text/event-stream" in bearer_resp.headers.get("content-type", "")
+            first_line = next(bearer_resp.iter_lines())
+            assert "event: endpoint" in first_line
+
+
+@pytest.mark.asyncio
+async def test_full_mcp_client_with_cloudflare_reverse_proxy_headers(sse_test_server):
+    """Full MCP Client initialization with simulated Cloudflare headers and query param auth."""
+    base_url, api_key = sse_test_server
+    cf_headers = {
+        "Host": "mcp.subdomain.workers.dev",
+        "X-Forwarded-Proto": "https",
+        "CF-Connecting-IP": "198.51.100.24",
+    }
+    async with sse_client(f"{base_url}/sse?api_key={api_key}", headers=cf_headers) as streams:
+        async with ClientSession(*streams) as session:
+            await session.initialize()
+            tools = await session.list_tools()
+            tool_names = [t.name for t in tools.tools]
+            assert "s1gate_triage_diff" in tool_names
+            assert "s1gate_inspect_file" in tool_names
+            assert "s1gate_verify_remediation" in tool_names
+
+
+def test_reverse_proxy_subpath_prefix(sse_test_server):
+    """When behind reverse proxy with X-Forwarded-Prefix: /s1gate, SSE endpoint must emit /s1gate/messages/."""
+    base_url, api_key = sse_test_server
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "X-Forwarded-Prefix": "/s1gate",
+        "X-Forwarded-Proto": "https",
+        "Host": "mcp.cuang.dev",
+    }
+    with httpx.Client() as client:
+        with client.stream("GET", f"{base_url}/sse", headers=headers) as response:
+            assert response.status_code == 200
+            for line in response.iter_lines():
+                if line.startswith("data:"):
+                    assert "/s1gate/messages/?session_id=" in line
+                    break
+
+
+def test_direct_subpath_routing_and_health(sse_test_server):
+    """Requests using /s1gate/health or /s1gate/sse directly should route cleanly."""
+    base_url, api_key = sse_test_server
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "X-Forwarded-Prefix": "/s1gate",
+    }
+    with httpx.Client() as client:
+        # 1. Subpath health
+        h_resp = client.get(f"{base_url}/s1gate/health", headers=headers)
+        assert h_resp.status_code == 200
+        assert h_resp.json()["status"] == "healthy"
+
+        # 2. Subpath SSE
+        with client.stream("GET", f"{base_url}/s1gate/sse", headers=headers) as sse_resp:
+            assert sse_resp.status_code == 200
+            for line in sse_resp.iter_lines():
+                if line.startswith("data:"):
+                    assert "/s1gate/messages/?session_id=" in line
+                    break
+
+

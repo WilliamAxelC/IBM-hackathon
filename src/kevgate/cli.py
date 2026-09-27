@@ -191,6 +191,62 @@ def config() -> None:
     typer.echo(json.dumps(data, indent=2))
 
 
+# ---------------------------------------------------------------------------
+# mcp & serve
+# ---------------------------------------------------------------------------
+
+@app.command("mcp")
+def mcp_cmd(
+    transport: str = typer.Option(
+        "stdio",
+        "--transport",
+        "-t",
+        help="Transport type: 'stdio' (default, local process for Bob/Antigravity/Claude) or 'sse'/'http' (remote).",
+    ),
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Bind host for SSE server (default: 0.0.0.0)."),
+    port: int = typer.Option(8000, "--port", "-p", help="Bind port for SSE server (default: 8000)."),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key", "-k", help="API key to protect SSE endpoint (or set S1GATE_SERVER_API_KEY)."
+    ),
+) -> None:
+    """
+    Start S1Gate as a Model Context Protocol (MCP) server.
+
+    By default, uses 'stdio' transport for local agent harnesses (IBM Bob IDE, Claude Code, Antigravity).
+    Use --transport sse to run as a hosted network service over HTTP/SSE.
+    """
+    mode = transport.lower().strip()
+    if mode == "stdio":
+        from kevgate.mcp_server import server
+        asyncio.run(server.run_stdio_async())
+    elif mode in ("sse", "http"):
+        import uvicorn
+        from kevgate.sse_server import create_app
+        app_instance = create_app(api_key=api_key)
+        uvicorn.run(app_instance, host=host, port=port, proxy_headers=True, forwarded_allow_ips="*")
+    else:
+        typer.echo(f"[s1gate] ERROR: Unsupported transport '{transport}'. Valid options: 'stdio', 'sse'.", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command("serve")
+def serve_cmd(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="Bind host (default: 0.0.0.0)."),
+    port: int = typer.Option(8000, "--port", "-p", help="Bind port (default: 8000)."),
+    api_key: Optional[str] = typer.Option(
+        None, "--api-key", "-k", help="API key to protect server (or set S1GATE_SERVER_API_KEY)."
+    ),
+) -> None:
+    """
+    Start the hosted Remote MCP SSE Server over HTTP.
+
+    Optimized for Cloudflare Tunnels, reverse proxies, and remote evaluator access.
+    """
+    import uvicorn
+    from kevgate.sse_server import create_app
+    app_instance = create_app(api_key=api_key)
+    uvicorn.run(app_instance, host=host, port=port, proxy_headers=True, forwarded_allow_ips="*")
+
 
 # ---------------------------------------------------------------------------
 # Entry point
