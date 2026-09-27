@@ -36,4 +36,5 @@ htmlcov/
 .bob/tasks/pending_remediation.json
 .s1gate/
 qa_vulnerable_cases/
+/presentation/
 
