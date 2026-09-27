@@ -105,7 +105,7 @@ def check(
     if secret_findings:
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
         first_s = secret_findings[0]
-        target_f = chunks[0].file_b if chunks else None
+        target_f = chunks[0].file_path if chunks else None
         payload = DecisionPayload(
             category="security_risk",
             risk_score=95,
