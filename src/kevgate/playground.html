@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>S1Gate — System-1 Decision Layer & MCP Server Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --border: rgba(255, 255, 255, 0.1);
+      --ibm-blue: #0f62fe;
+      --cyan: #00f2fe;
+      --pass: #10b981;
+      --warn: #f59e0b;
+      --block: #ef4444;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(circle at 10% 10%, #111a2e 0%, #060911 100%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient glow elements */
+    .glow-top {
+      position: fixed;
+      top: -200px;
+      right: -200px;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(15, 98, 254, 0.2) 0%, transparent 70%);
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-bottom {
+      position: fixed;
+      bottom: -200px;
+      left: -200px;
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, transparent 70%);
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 30px 24px 80px 24px;
+      width: 100%;
+    }
+
+    /* Navigation */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--ibm-blue), var(--cyan));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.35);
+    }
+
+    .brand-icon svg { width: 24px; height: 24px; fill: white; }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #fff 40%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge-live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .btn-outline {
+      padding: 8px 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Hero section */
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: rgba(15, 98, 254, 0.15);
+      border: 1px solid rgba(15, 98, 254, 0.4);
+      color: #38bdf8;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 {
+      font-size: 46px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 800px;
+      margin: 0 auto 30px auto;
+      line-height: 1.6;
+    }
+
+    /* Playground Main Layout */
+    .playground-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      margin-bottom: 50px;
+    }
+
+    @media (max-width: 960px) {
+      .playground-grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Preset buttons */
+    .presets-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .preset-btn:hover, .preset-btn.active {
+      background: rgba(15, 98, 254, 0.25);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    /* Code editor textarea */
+    .diff-textarea {
+      width: 100%;
+      height: 340px;
+      background: #070b14;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 16px;
+      line-height: 1.5;
+      resize: vertical;
+      margin-bottom: 18px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .diff-textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+    }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .input-key {
+      flex: 1;
+      background: #070b14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+    }
+
+    .btn-run {
+      background: linear-gradient(135deg, #0f62fe 0%, #00b4d8 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(15, 98, 254, 0.4);
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-run:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 25px rgba(0, 242, 254, 0.5);
+    }
+
+    .btn-run:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Result Panel */
+    .result-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .decision-banner {
+      border-radius: 12px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .banner-idle {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed var(--border);
+      color: var(--text-muted);
+    }
+
+    .banner-pass {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+
+    .banner-warn {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    .banner-block {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #f87171;
+    }
+
+    .verdict-text {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .score-badge {
+      font-size: 15px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metric-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .invariants-box {
+      margin-bottom: 20px;
+    }
+
+    .invariant-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      margin: 3px;
+    }
+
+    .inv-pass { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .inv-fail { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+    .remediation-box {
+      background: #070b14;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      margin-bottom: 20px;
+    }
+
+    /* IBM Bob Config Section */
+    .config-section {
+      margin-top: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .code-snippet {
+      background: #070a12;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #cbd5e1;
+      position: relative;
+      overflow-x: auto;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+    footer {
+      text-align: center;
+      margin-top: auto;
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-top"></div>
+  <div class="glow-bottom"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <a href="/s1gate" class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">S1Gate Playground</div>
+          <div style="font-size: 12px; color: var(--text-muted);">IBM Bob 2.0 Hackathon • Remote MCP Server</div>
+        </div>
+      </a>
+
+      <div class="nav-links">
+        <div class="badge-live">
+          <div class="pulse-dot"></div>
+          <span>MCP SSE LIVE</span>
+        </div>
+        <a href="https://github.com/WilliamAxelC/IBM-hackathon" target="_blank" class="btn-outline">GitHub Repo</a>
+        <a href="/s1gate/health" target="_blank" class="btn-outline">Health API</a>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">SUB-SECOND SYSTEM-1 DECISION LAYER</div>
+      <h1>Test Git Diff Triage in Real Time</h1>
+      <p>Select a preset test case or paste your own git unified diff below. S1Gate short-circuits obvious credential leaks in <strong>&lt;0.05ms</strong> and evaluates code vulnerabilities using Gemini 3.1 Flash Lite in <strong>~1.2 seconds</strong>.</p>
+    </div>
+
+    <!-- Playground Grid -->
+    <div class="playground-grid">
+      <!-- Input Column -->
+      <div class="card">
+        <div class="card-title">
+          <span>Git Unified Diff Input</span>
+          <span style="font-size: 12px; color: var(--text-muted); font-weight: 400;">Choose a Preset:</span>
+        </div>
+
+        <div class="presets-container">
+          <button class="preset-btn active" onclick="loadPreset('safe')">1. Safe Routine Edit</button>
+          <button class="preset-btn" onclick="loadPreset('aws')">2. AWS Secret Leak</button>
+          <button class="preset-btn" onclick="loadPreset('ssrf')">3. SSRF (CWE-918)</button>
+          <button class="preset-btn" onclick="loadPreset('bola')">4. BOLA / IDOR (CWE-639)</button>
+          <button class="preset-btn" onclick="loadPreset('proto')">5. Prototype Pollution</button>
+        </div>
+
+        <textarea id="diffInput" class="diff-textarea" spellcheck="false"></textarea>
+
+        <div class="form-row">
+          <input id="apiKeyInput" type="text" class="input-key" value="s1gate-judge-secret-key-2026" placeholder="Judge API Key" />
+          <button id="runBtn" class="btn-run" onclick="runTriage()">
+            <span id="btnIcon">⚡</span>
+            <span id="btnText">Run S1Gate Triage</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Result Column -->
+      <div class="card result-panel">
+        <div class="card-title">
+          <span>Triage Verdict</span>
+          <span id="liveLatency" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #38bdf8;">Ready</span>
+        </div>
+
+        <div id="decisionBanner" class="decision-banner banner-idle">
+          <div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Policy Engine Gate</div>
+            <div id="verdictText" class="verdict-text">AWAITING INPUT</div>
+          </div>
+          <div id="scoreBadge" class="score-badge" style="background: rgba(255,255,255,0.08);">Risk: -- / 100</div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric-card">
+            <div class="metric-label">PROCESSING TIME</div>
+            <div id="processingMetric" class="metric-val">-- ms</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">DECISION CONFIDENCE</div>
+            <div id="confidenceMetric" class="metric-val">--</div>
+          </div>
+        </div>
+
+        <div class="invariants-box">
+          <div style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 8px;">SECURITY INVARIANTS:</div>
+          <div id="invariantsList">
+            <span class="invariant-pill inv-pass">Breaking Change: Safe</span>
+            <span class="invariant-pill inv-pass">Unprotected Resource: Safe</span>
+            <span class="invariant-pill inv-pass">Unhandled Failure: Safe</span>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 6px;">DIAGNOSIS & REMEDIATION:</div>
+        <div id="remediationBox" class="remediation-box">
+          Select a test case and click "Run S1Gate Triage" to simulate the Actor-Critic feedback loop.
+        </div>
+
+        <div style="margin-top: auto; font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">
+          Critic Tool: <code style="color: #38bdf8;">s1gate_verify_remediation</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Setup in IBM Bob -->
+    <div class="config-section">
+      <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 12px;">Connect IBM Bob to Remote MCP Server</h2>
+      <p style="color: var(--text-muted); font-size: 15px; margin-bottom: 20px;">
+        To connect your IBM Bob IDE or Claude Desktop directly to this remote MCP server across the internet with zero local setup, add this to your <code>mcp.json</code>:
+      </p>
+
+      <div class="code-snippet">
+        <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('mcpSnippet').innerText); this.innerText='Copied!'; setTimeout(() => this.innerText='Copy', 1500);">Copy</button>
+        <pre id="mcpSnippet">{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://mcp.cuang.dev/s1gate/sse",
+      "headers": {
+        "Authorization": "Bearer s1gate-judge-secret-key-2026"
+      }
+    }
+  }
+}</pre>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px;">
+        <div><strong>Hosted URL:</strong> <code style="color: #38bdf8;">https://mcp.cuang.dev/s1gate/sse</code></div>
+        <div><strong>Transport:</strong> Server-Sent Events (SSE)</div>
+        <div><strong>Judge Key:</strong> <code style="color: #fbbf24;">s1gate-judge-secret-key-2026</code></div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <div>S1Gate • IBM Bob 2.0 Hackathon • Built with Google Gemini 3.1 Flash Lite & Model Context Protocol</div>
+      <div style="margin-top: 8px;">MIT License • <a href="https://github.com/WilliamAxelC/IBM-hackathon" style="color: #38bdf8;">WilliamAxelC/IBM-hackathon</a></div>
+    </footer>
+  </div>
+
+  <script>
+    const PRESETS = {
+      safe: `--- a/README.md
++++ b/README.md
+@@ -10,3 +10,4 @@
+ ## Installation
+ \`\`\`bash
+ uv add s1gate
++\`\`\`
++Documentation updated for IBM Bob 2.0 hackathon.`,
+
+      aws: `--- a/config/settings.py
++++ b/config/settings.py
+@@ -15,3 +15,5 @@
+ DB_HOST = "10.20.20.11"
++AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
++AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"`,
+
+      ssrf: `--- a/services/webhook.py
++++ b/services/webhook.py
+@@ -25,4 +25,12 @@
+ def trigger_webhook(user_url: str, payload: dict):
++    # Flawed IP check allowing IPv4-mapped IPv6 internal metadata bypass
++    parsed = urllib.parse.urlparse(user_url)
++    ip = socket.gethostbyname(parsed.hostname)
++    if ip == "127.0.0.1":
++        raise ValueError("Loopback not allowed")
++    return requests.post(f"http://[::ffff:{ip}]/metadata", json=payload)`,
+
+      bola: `--- a/api/routes/tenants.py
++++ b/api/routes/tenants.py
+@@ -12,4 +12,5 @@
+ @router.get("/documents/{doc_id}")
+-def get_document(doc_id: int, current_user: User = Depends(get_current_user)):
+-    return db.query(Document).filter(Document.id == doc_id, Document.tenant_id == current_user.tenant_id).first()
++def get_document(doc_id: int):
++    # Broken Object Level Authorization: tenant boundary check removed
++    return db.query(Document).filter(Document.id == doc_id).first()`,
+
+      proto: `--- a/utils/merge.ts
++++ b/utils/merge.ts
+@@ -8,3 +8,7 @@
+ export function deepMerge(target: any, source: any) {
++  for (const key of Object.keys(source)) {
++    // Prototype pollution: no check on __proto__ or constructor
++    target[key] = source[key];
++  }
+   return target;
+ }`
+    };
+
+    function loadPreset(key) {
+      document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('diffInput').value = PRESETS[key] || '';
+    }
+
+    // Default load safe
+    document.getElementById('diffInput').value = PRESETS.safe;
+
+    async function runTriage() {
+      const diff = document.getElementById('diffInput').value;
+      const apiKey = document.getElementById('apiKeyInput').value;
+      const btn = document.getElementById('runBtn');
+      const btnText = document.getElementById('btnText');
+      const btnIcon = document.getElementById('btnIcon');
+      const liveLatency = document.getElementById('liveLatency');
+
+      if (!diff.trim()) {
+        alert('Please enter a unified git diff.');
+        return;
+      }
+
+      btn.disabled = true;
+      btnText.innerText = 'Evaluating Diff...';
+      btnIcon.innerText = '⏳';
+      liveLatency.innerText = 'Triage in progress...';
+
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch('/s1gate/api/triage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + apiKey
+          },
+          body: JSON.stringify({ diff, api_key: apiKey })
+        });
+
+        const elapsed = Math.round(performance.now() - t0);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || data.error || 'Server error ' + res.status);
+        }
+
+        renderResult(data, elapsed);
+      } catch (err) {
+        alert('Error running triage: ' + err.message);
+        liveLatency.innerText = 'Failed';
+      } finally {
+        btn.disabled = false;
+        btnText.innerText = 'Run S1Gate Triage';
+        btnIcon.innerText = '⚡';
+      }
+    }
+
+    function renderResult(data, roundTripMs) {
+      const banner = document.getElementById('decisionBanner');
+      const verdictText = document.getElementById('verdictText');
+      const scoreBadge = document.getElementById('scoreBadge');
+      const liveLatency = document.getElementById('liveLatency');
+      const processingMetric = document.getElementById('processingMetric');
+      const confidenceMetric = document.getElementById('confidenceMetric');
+      const invariantsList = document.getElementById('invariantsList');
+      const remediationBox = document.getElementById('remediationBox');
+
+      const decision = data.decision || 'BLOCK';
+      const score = data.risk_score !== undefined ? data.risk_score : 100;
+      const procTime = data.processing_time_ms ? data.processing_time_ms + ' ms' : roundTripMs + ' ms';
+
+      banner.className = 'decision-banner';
+      if (decision === 'PASS') {
+        banner.classList.add('banner-pass');
+        scoreBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+        scoreBadge.style.color = '#34d399';
+      } else if (decision === 'WARN') {
+        banner.classList.add('banner-warn');
+        scoreBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+        scoreBadge.style.color = '#fbbf24';
+      } else {
+        banner.classList.add('banner-block');
+        scoreBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+        scoreBadge.style.color = '#f87171';
+      }
+
+      verdictText.innerText = decision;
+      scoreBadge.innerText = 'Risk Score: ' + score + ' / 100';
+      liveLatency.innerText = 'Done in ' + procTime;
+      processingMetric.innerText = procTime;
+      confidenceMetric.innerText = Math.round((data.confidence || 0.95) * 100) + '%';
+
+      // Invariants
+      invariantsList.innerHTML = '';
+      const invs = [
+        { name: 'Breaking Change', val: data.is_breaking_change },
+        { name: 'Unprotected Resource', val: data.exposes_unprotected_resource },
+        { name: 'Unhandled Failure', val: data.unhandled_failure_mode }
+      ];
+
+      invs.forEach(inv => {
+        const pill = document.createElement('span');
+        pill.className = 'invariant-pill ' + (inv.val ? 'inv-fail' : 'inv-pass');
+        pill.innerText = inv.name + ': ' + (inv.val ? 'VIOLATED' : 'Clean');
+        invariantsList.appendChild(pill);
+      });
+
+      // Remediation / summary
+      let html = '<strong>' + (data.category || 'Triage Result') + ':</strong> ' + (data.summary || 'Evaluation complete.') + '<br/><br/>';
+      if (data.remediation_hint) {
+        html += '<strong style="color: #38bdf8;">Remediation Hint for IBM Bob:</strong><br/>' + data.remediation_hint;
+      } else {
+        html += '<span style="color: #34d399;">Safe to commit. Zero agent quota and zero Bobcoins consumed.</span>';
+      }
+      remediationBox.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
