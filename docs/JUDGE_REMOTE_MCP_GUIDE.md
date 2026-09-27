@@ -137,7 +137,67 @@ data: /messages/?session_id=...
 
 ---
 
-## 4. Hosting & Running Your Own S1Gate Instance
+## 4. Reverse Proxying with Cloudflare (Tunnel or Custom Domain)
+
+S1Gate is pre-configured to work behind Cloudflare Tunnels and reverse proxies out-of-the-box.
+
+### Option 1: Instant Cloudflare Tunnel (1-Command)
+
+If you have `cloudflared` installed (or let the script download it), you can launch an instant public HTTPS endpoint in one command:
+
+```bash
+# Launch S1Gate + Cloudflare Tunnel
+./scripts/start_mcp_cloudflare.sh
+```
+
+This starts the server on port 8000 and prints a live public URL:
+```text
+https://alpha-beta-gamma.trycloudflare.com
+```
+
+### Option 2: Manual `cloudflared` Tunnel
+
+If you already have S1Gate running on port 8000:
+```bash
+cloudflared tunnel --url http://127.0.0.1:8000
+```
+
+### Option 3: Custom Domain via Cloudflare Reverse Proxy (NGINX / Caddy / Cloudflare Rules)
+
+When routing through a Cloudflare-proxied domain (orange-clouded):
+1. **Response Buffering**: S1Gate automatically sends `X-Accel-Buffering: no` and `Cache-Control: no-cache, no-transform, no-store`. In the Cloudflare dashboard, ensure no caching or buffering rules intercept `/sse`.
+2. **CORS Support**: S1Gate natively responds to `OPTIONS` preflight requests with `204 No Content` and permissive CORS headers.
+3. **Session ID Authorization**: If an agent connects via `https://your-domain.com/sse?api_key=<KEY>`, S1Gate tracks the session ID. Subsequent message dispatches to `/messages/?session_id=<UUID>` remain authorized automatically.
+
+### Configuring Bob IDE / Claude Code with Cloudflare URL
+
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://your-tunnel.trycloudflare.com/sse",
+      "headers": {
+        "Authorization": "Bearer <YOUR_KEY>"
+      }
+    }
+  }
+}
+```
+
+Or via URL query parameter:
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "https://your-tunnel.trycloudflare.com/sse?api_key=<YOUR_KEY>"
+    }
+  }
+}
+```
+
+---
+
+## 5. Hosting & Running Your Own S1Gate Instance
 
 If judges prefer to host their own instance:
 
@@ -158,7 +218,7 @@ python -m kevgate.sse_server --host 0.0.0.0 --port 8000 --api-key "judge-secret-
 
 ---
 
-## 5. Security & Isolation Guarantees
+## 6. Security & Isolation Guarantees
 
 - **Zero Secret Leakage**: The `/health` endpoint exposes zero keys or credentials.
 - **Pure ASGI Streaming**: SSE connections are streamed natively without response buffering, preventing denial-of-service hangs.
