@@ -143,7 +143,7 @@ def extract_file_diff(file_path: str) -> str:
     """
     Run `git diff HEAD -- <file_path>` and return the unified diff.
 
-    Used by the MCP `kevgate_inspect_file` tool.
+    Used by the MCP `s1gate_inspect_file` tool.
     """
     result = subprocess.run(
         ["git", "diff", "HEAD", "--", file_path],

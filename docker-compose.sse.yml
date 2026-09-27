@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  s1gate-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.sse
+    image: s1gate-mcp:latest
+    container_name: s1gate-remote-mcp
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # S1Gate Server Protection Key (shared with Judges)
+      - S1GATE_SERVER_API_KEY=${S1GATE_SERVER_API_KEY:-s1gate-judge-secret-key-2026}
+      # Gemini API Key (or LM Studio URL)
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-3.5-flash-lite
+      - S1GATE_BACKEND=gemini
+      - S1GATE_BLOCK_THRESHOLD=70
+      - S1GATE_WARN_THRESHOLD=30
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -1,0 +1,20 @@
+diff --git a/src/storage/local.py b/src/storage/local.py
+index a9b0c1d..e2f3a4b 100644
+--- a/src/storage/local.py
++++ b/src/storage/local.py
+@@ -1,9 +1,15 @@
++import os
+ from pathlib import Path
+ 
+ def safe_write_upload(base_dir: Path, user_filename: str, content: bytes) -> Path:
+     """Safely write an uploaded file ensuring strict directory containment."""
+     base = base_dir.resolve()
+-    target = base / user_filename
++    # Resolves any symlinks and relative '../' components
++    target = (base / user_filename).resolve()
++    # Strict containment check using commonpath prevents directory traversal
++    if os.path.commonpath([str(base), str(target)]) != str(base):
++        raise ValueError(f"Path traversal detected: {user_filename}")
+     target.parent.mkdir(parents=True, exist_ok=True)
+     target.write_bytes(content)
+     return target

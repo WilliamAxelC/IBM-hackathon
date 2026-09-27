@@ -4,7 +4,7 @@
 > **Prize Pool**: **$12,000 USD**  
 > **Duration**: 48 Hours  
 > **Eligible Accounts Region**: `us-east` (Instance: `ibm-coding-challenge-uat`)  
-> **Local Project Source**: [KevGate Architecture](ARCHITECTURE.md) | [Bob Sessions Evidence](bob_sessions/README.md)
+> **Local Project Source**: [S1Gate Architecture](ARCHITECTURE.md) | [Bob Sessions Evidence](bob_sessions/README.md)
 
 ---
 
@@ -19,7 +19,7 @@
 7. [The Mandatory `bob_sessions/` Deliverable](#7-the-mandatory-bob_sessions-deliverable)
 8. [Submission Checklist & Deliverables](#8-submission-checklist--deliverables)
 9. [Judging Criteria & How to Win](#9-judging-criteria--how-to-win)
-10. [KevGate Strategy: How Our Project Aligns with the Judges](#10-kevgate-strategy-how-our-project-aligns-with-the-judges)
+10. [S1Gate Strategy: How Our Project Aligns with the Judges](#10-s1gate-strategy-how-our-project-aligns-with-the-judges)
 
 ---
 
@@ -72,8 +72,8 @@ Every participant account is allocated exactly **40 Bobcoins** at kickoff. Every
      ```bash
      bob chat --auto-approve --trust --max-cost 2.0 --max-turns 20
      ```
-3. **Use Local Models for High-Frequency Loops**:
-   * Run local inference (e.g. Kev-4B in LM Studio on your RX 6600 XT) for pre-commit linting, diff triage, and AST checks to avoid burning expensive Bobcoins on trivial formatting or syntactic errors.
+3. **Use Local or Free Cloud Models for High-Frequency Loops (S1Gate)**:
+   * Run S1Gate's System-1 triage (using the free Gemini Flash Lite API key configured in `.env`, or local LM Studio) for pre-commit linting, diff triage, and AST checks to avoid burning expensive Bobcoins on trivial formatting or routine changes.
 4. **Fallback Options**:
    * If coins deplete, IBM watsonx Prompt Lab (Granite 3.0 models) and watsonx Orchestrate remain accessible via IBM Cloud free-tier credentials.
 
@@ -140,7 +140,7 @@ graph TD
 * **Frontend / Backend**: Any language (Python, TypeScript, Go, Rust, C++).
 * **Architecture**: Standalone apps, libraries, developer tools, CLI utilities, MCP servers, web apps.
 * **LLM Backends**: You can integrate local inference (LM Studio, vLLM), OpenAI, Anthropic, or watsonx Granite.
-* **Cross-Agent Harnesses**: Tools like KevGate can be designed to serve Bob Shell, Claude Code, Kiro, and Antigravity via standard MCP.
+* **Cross-Agent Harnesses**: Tools like S1Gate can be designed to serve Bob Shell, Claude Code, Kiro, and Antigravity via standard MCP.
 
 ---
 
@@ -159,9 +159,9 @@ The judging panel verifies Bob usage by inspecting the [`bob_sessions/`](bob_ses
    bob_sessions/<team_name>_task<XX>_<feature_name>_summary.png
    ```
    *Example*:
-   * `bob_sessions/kevgate_task01_mcp_scaffold_summary.png`
-   * `bob_sessions/kevgate_task02_diff_engine_summary.png`
-   * `bob_sessions/kevgate_task03_benchmarks_summary.png`
+   * `bob_sessions/s1gate_task01_mcp_scaffold_summary.png`
+   * `bob_sessions/s1gate_task02_diff_engine_summary.png`
+   * `bob_sessions/s1gate_task03_benchmarks_summary.png`
 
 > [!TIP]
 > Capture your screenshots **incrementally** after finishing each milestone. Do not wait until the final hour before submission.
@@ -172,27 +172,41 @@ The judging panel verifies Bob usage by inspecting the [`bob_sessions/`](bob_ses
 
 Before the submission deadline closes, complete every item:
 
-- [ ] **GitHub Repository**:
-  - [ ] Publicly accessible.
-  - [ ] [`README.md`](README.md) with comprehensive setup instructions, architecture diagram, and demo flow.
-  - [ ] [`ARCHITECTURE.md`](ARCHITECTURE.md) detailing technical design and workflow.
-  - [ ] [`bob_sessions/`](bob_sessions/) directory containing at least 2–4 verified task session screenshots.
+- [x] **GitHub Repository**:
+  - [x] Publicly accessible — [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)
+  - [x] [`README.md`](README.md) with comprehensive setup instructions, architecture diagram, and demo flow.
+  - [x] [`ARCHITECTURE.md`](ARCHITECTURE.md) detailing technical design and workflow.
+  - [x] [`.env.example`](.env.example) documenting API keys and settings (`.env` is in `.gitignore` — never committed).
+  - [x] [`bob_sessions/`](bob_sessions/) directory — **9 verified screenshots** captured (tasks 01–03 + budget tracker + error matrix).
+  - [x] `uv.lock` committed — reproducible installs via `uv sync`.
+  - [x] 64/64 unit tests passing (`uv run pytest tests/ -v`).
 - [ ] **Demonstration Video**:
   - [ ] Length: **3 to 5 minutes** (Strict: avoid going over 5 minutes).
   - [ ] Uploaded to YouTube (Unlisted or Public) or Loom.
-  - [ ] **Structure**:
-    1. *The Problem* (30s): LLM coding agents burn tokens on bad diffs, security vulnerabilities, and runaway loops.
-    2. *The Solution* (60s): Fast non-autoregressive decision gating (KevGate) via universal MCP.
-    3. *Live Demo* (120s): Show Bob IDE / Bob Shell hitting the gate, catching bad code, and passing safe commits.
-    4. *Business Impact & Tech Value* (30s): 10x token savings, local GPU execution, multi-harness compatibility.
+  - [x] **Script ready** — see [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) for full structured script.
+  - [ ] **Structure** *(follow script)*:
+    1. *The Problem* (0:00–0:30): LLM coding agents burn tokens on bad diffs, security vulnerabilities, and runaway loops.
+    2. *The Solution* (0:30–1:30): Fast System-1 pre-commit decision gating (S1Gate) via universal MCP.
+    3. *Live Demo* (1:30–3:30): Show Bob IDE / Bob Shell hitting the gate, catching bad code, and passing safe commits.
+    4. *Business Impact & Benchmarks* (3:30–4:00): 0% Type II escape rate, 100% accuracy on 40 diffs, 10x token savings.
 - [ ] **Lablab.ai Submission Form**:
-  - [ ] Project Title & Tagline.
+  - [ ] Project Title: **S1Gate — Universal System-1 Pre-Commit Decision Gate**
+  - [ ] Tagline: *"Stop burning Bobcoins on safe commits. S1Gate triages every diff in <150ms."*
   - [ ] Problem Statement & Solution description.
   - [ ] Link to public GitHub repository.
   - [ ] Link to demonstration video.
-  - [ ] Technologies used (IBM Bob 2.0, MCP, Python, LM Studio, etc.).
+  - [ ] Technologies: IBM Bob 2.0, MCP (Model Context Protocol), Python 3.11, Google Gemini 3.5 Flash Lite, LM Studio, Shannon Entropy Analysis, uv, pytest.
 - [ ] **Post-Submission**:
   - [ ] Complete the official participant feedback survey to qualify for the 20 × $100 reward pool.
+
+### 👤 Raja's Tasks (raja-dev branch)
+- [x] Reviewed all of William's `william-dev` work and merged into `raja-dev`
+- [x] Fixed README — install instructions, `uv sync`, added team section
+- [x] Created [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — full 4-min structured video script
+- [x] Updated this submission checklist with current completion status
+- [ ] Record the demo video following [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+- [ ] Upload video to YouTube/Loom and add URL to Lablab.ai form
+- [ ] Submit on Lablab.ai before deadline
 
 ---
 
@@ -213,11 +227,11 @@ pie title Judging Score Distribution
    * Does the project genuinely use Bob's capabilities (modes, subagents, tools, MCP, or shell)?
    * Are the `bob_sessions/` screenshots authentic and clear?
 2. **Technical Complexity & Innovation (25%)**:
-   * Does the project introduce a novel concept (e.g. non-autoregressive decision modeling, asymmetric risk gating)?
+   * Does the project introduce a novel concept (e.g. System-1 pre-commit decision modeling, asymmetric risk gating)?
    * Is it technically challenging rather than a generic prompt wrapper?
 3. **Practical Business Value (20%)**:
    * Does it solve a real developer pain point?
-   * *For KevGate*: Reducing LLM token costs, preventing secret leaks, and automating code reviews solves a universal $100M+ industry issue.
+   * *For S1Gate*: Reducing LLM token costs, preventing secret leaks, and automating code reviews solves a universal $100M+ industry issue.
 4. **Working Prototype Quality (15%)**:
    * Does the code run? Is it documented with reproducible tests and CLI commands?
 5. **Presentation & Pitch (15%)**:
@@ -225,17 +239,17 @@ pie title Judging Score Distribution
 
 ---
 
-## 10. KevGate Strategy: How Our Project Aligns with the Judges
+## 10. S1Gate Strategy: How Our Project Aligns with the Judges
 
-Our project, **KevGate**, is engineered to score near 100% across all 5 judging criteria:
+Our project, **S1Gate**, is engineered to score near 100% across all 5 judging criteria:
 
-| Hackathon Requirement | KevGate Implementation |
+| Hackathon Requirement | S1Gate Implementation |
 | :--- | :--- |
 | **Bob Integration** | Implemented as a **Universal Model Context Protocol (MCP)** server natively loaded into Bob IDE and Bob Shell via `bob mcp add-json`. |
-| **Token / Coin Conservation** | Directly addresses the 40-Bobcoin scarcity by inserting a 50ms local discriminator (Kev-4B) to block junk commits before Bob burns tokens. |
+| **Token / Coin Conservation** | Directly addresses the 40-Bobcoin scarcity by inserting a sub-second System-1 discriminator (Gemini Flash Lite API or local LM Studio) to block junk commits before Bob burns tokens. |
 | **Cross-Harness Utility** | Works out-of-the-box not just in Bob, but in Claude Code, Antigravity, Kiro, Codex, and pre-commit git hooks. |
 | **Verifiable Evidence** | Bob IDE is used to build, test, and run the benchmark suites, captured directly in [`bob_sessions/`](bob_sessions/). |
-| **Edge Hardware Optimization** | Runs locally on consumer GPUs (AMD RX 6600 XT via LM Studio) without cloud API dependencies. |
+| **Zero Friction MVP & Edge Hardware Option** | Uses a free Gemini Flash Lite API key via `.env` for zero-install instant testing, with an optional offline local GPU backend (AMD RX 6600 XT via LM Studio). |
 
 ---
 

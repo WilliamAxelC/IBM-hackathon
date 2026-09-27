@@ -1,0 +1,14 @@
+diff --git a/src/crypto/utils.py b/src/crypto/utils.py
+index f2a3b4c..d5e6f7a 100644
+--- a/src/crypto/utils.py
++++ b/src/crypto/utils.py
+@@ -10,8 +10,13 @@ def constant_time_compare_custom(val_a: bytes, val_b: bytes) -> bool:
+     """Custom constant-time byte comparison when standard library is unavailable."""
+-    return val_a == val_b
++    if len(val_a) != len(val_b):
++        return False
++    result = 0
++    # Bitwise XOR accumulation ensures loop executes over every byte regardless of mismatch
++    for x, y in zip(val_a, val_b):
++        result |= x ^ y
++    return result == 0

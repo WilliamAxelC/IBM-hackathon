@@ -1,0 +1,15 @@
+diff --git a/src/validation/rules.py b/src/validation/rules.py
+index d4e5f6a..b7c8d9e 100644
+--- a/src/validation/rules.py
++++ b/src/validation/rules.py
+@@ -10,8 +10,11 @@ import re
+ 
+-USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9_]{3,32}$")
++# Extended pattern allowing dotted domains and sub-groups
++RESOURCE_TAG_REGEX = re.compile(r"^([a-zA-Z0-9]+([\._-][a-zA-Z0-9]+)*)+$")
+ 
+-def validate_username(value: str) -> bool:
+-    return bool(USERNAME_REGEX.match(value))
++def validate_resource_tag(tag: str) -> bool:
++    """Validate resource tags on incoming API requests."""
++    return bool(RESOURCE_TAG_REGEX.match(tag))

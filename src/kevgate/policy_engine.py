@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig
 from kevgate.schema import DecisionPayload
 
 
@@ -31,7 +31,7 @@ class GateDecision(str, Enum):
 
 def evaluate(
     payload: DecisionPayload,
-    config: KevGateConfig | None = None,
+    config: S1GateConfig | None = None,
     secret_findings_count: int = 0,
 ) -> GateDecision:
     """
@@ -47,13 +47,13 @@ def evaluate(
 
     Args:
         payload: Typed decision output from the LM Studio adapter.
-        config: KevGate configuration. Loads from environment if None.
+        config: S1Gate configuration. Loads from environment if None.
         secret_findings_count: Number of secrets found by the entropy pre-filter.
 
     Returns:
         GateDecision enum value.
     """
-    cfg = config or KevGateConfig()
+    cfg = config or S1GateConfig()
 
     # Rule 1: Pre-filter caught secrets
     if secret_findings_count > 0:
@@ -109,14 +109,14 @@ def generate_bob_task(
 
     task = {
         "task_type": "remediation",
-        "triggered_by": "kevgate",
+        "triggered_by": "s1gate",
         "version": "1.0",
         "payload": payload.model_dump(),
         "instructions": (
             payload.remediation_hint
             or f"Investigate and fix the following issue: {payload.summary}"
         ),
-        "verification_tool": "kevgate_verify_remediation",
+        "verification_tool": "s1gate_verify_remediation",
         "metadata": {
             "risk_score": payload.risk_score,
             "category": payload.category,
@@ -148,15 +148,17 @@ def format_gate_result(
     color = colors[decision] if use_color else ""
     end = reset if use_color else ""
 
+    badge = {"PASS": "[PASS]", "WARN": "[WARN]", "BLOCK": "[BLOCK]"}[decision.value]
+
     lines = [
-        f"{color}╔══ KevGate ─ {decision.value} ══╗{end}",
+        f"{color}+-- S1Gate {badge} --+{end}",
         f"  Category   : {payload.category}",
         f"  Risk Score : {payload.risk_score}/100  (confidence: {payload.confidence:.0%})",
         f"  Summary    : {payload.summary}",
     ]
 
     if secret_findings_count > 0:
-        lines.append(f"{color}  ⚠ Secrets  : {secret_findings_count} potential secret(s) detected in diff{end}")
+        lines.append(f"{color}  [!] Secrets : {secret_findings_count} potential secret(s) detected in diff{end}")
 
     if payload.target_file:
         target = payload.target_file
@@ -168,10 +170,10 @@ def format_gate_result(
         lines.append(f"  Fix        : {payload.remediation_hint}")
 
     if decision == GateDecision.BLOCK:
-        lines.append(f"{color}  → Commit blocked. Bob task written to .bob/tasks/pending_remediation.json{end}")
+        lines.append(f"{color}  -> Commit blocked. Bob task written to .bob/tasks/pending_remediation.json{end}")
     elif decision == GateDecision.WARN:
-        lines.append(f"{color}  → Commit allowed with warning.{end}")
+        lines.append(f"{color}  -> Commit allowed with warning.{end}")
     else:
-        lines.append(f"{color}  → Commit approved.{end}")
+        lines.append(f"{color}  -> Commit approved.{end}")
 
     return "\n".join(lines)

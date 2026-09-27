@@ -1,0 +1,21 @@
+diff --git a/src/concurrency/singleton.py b/src/concurrency/singleton.py
+index d6e7f8a..b9c0d1e 100644
+--- a/src/concurrency/singleton.py
++++ b/src/concurrency/singleton.py
+@@ -1,13 +1,18 @@
+ import threading
+ from typing import Optional
+ 
+ class ConnectionManager:
+     _instance: Optional["ConnectionManager"] = None
+     _lock: threading.Lock = threading.Lock()
+ 
+     @classmethod
+     def get_instance(cls) -> "ConnectionManager":
+-        return cls._instance or cls()
++        # Double-checked locking pattern for high-concurrency initialization
++        if cls._instance is None:
++            with cls._lock:
++                if cls._instance is None:
++                    cls._instance = cls()
++        return cls._instance

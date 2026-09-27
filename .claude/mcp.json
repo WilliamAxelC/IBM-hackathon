@@ -1,12 +1,10 @@
 {
   "mcpServers": {
-    "kevgate": {
+    "s1gate": {
       "command": "python",
       "args": ["-m", "kevgate.mcp_server"],
       "env": {
-        "KEVGATE_LMSTUDIO_BASE_URL": "http://localhost:1234/v1",
-        "KEVGATE_LMSTUDIO_MODEL": "kev-4b",
-        "KEVGATE_OFFLINE_BEHAVIOR": "warn"
+        "S1GATE_BACKEND": "gemini"
       }
     }
   }

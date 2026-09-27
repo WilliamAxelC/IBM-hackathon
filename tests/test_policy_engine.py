@@ -4,7 +4,7 @@ import json
 import pytest
 from pathlib import Path
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig
 from kevgate.policy_engine import GateDecision, evaluate, generate_bob_task, format_gate_result
 from kevgate.schema import DecisionPayload
 
@@ -27,14 +27,14 @@ def make_payload(**overrides) -> DecisionPayload:
     return DecisionPayload(**defaults)
 
 
-def make_config(**overrides) -> KevGateConfig:
+def make_config(**overrides) -> S1GateConfig:
     defaults = dict(
         lmstudio_base_url="http://localhost:1234/v1",
         block_threshold=70,
         warn_threshold=30,
     )
     defaults.update(overrides)
-    return KevGateConfig(**defaults)
+    return S1GateConfig(**defaults)
 
 
 class TestEvaluate:
@@ -105,7 +105,7 @@ class TestGenerateBobTask:
         task_file = generate_bob_task(payload, repo_root=tmp_path)
         data = json.loads(task_file.read_text())
         assert data["task_type"] == "remediation"
-        assert data["triggered_by"] == "kevgate"
+        assert data["triggered_by"] == "s1gate"
         assert data["payload"]["risk_score"] == 85
 
     def test_task_file_path(self, tmp_path: Path):

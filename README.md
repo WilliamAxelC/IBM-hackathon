@@ -1,188 +1,268 @@
-# KevGate — Universal System-1 Decision Layer for Agentic Coding Harnesses
+# S1Gate — Universal System-1 Decision Layer for Agentic Coding Harnesses
 
-> **Event**: IBM Bob 2.0 Hackathon (Hosted on lablab.ai)  
-> **Repository**: [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)  
-> **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md) | **Bob Sessions**: [bob_sessions/](bob_sessions/)
-
----
-
-## What is KevGate?
-
-Modern AI coding agents (IBM Bob, Claude Code, Agrav, Kiro, Codex) excel at deep multi-file code synthesis but create two bottlenecks when used on every `git commit`:
-
-1. **Latency**: LLM generation takes 5–30s per evaluation — developers disable hooks with `--no-verify`.
-2. **Token burn**: 80–90% of commits are safe formatting or doc changes. Running heavy models on every micro-commit exhausts quotas (IBM Bob's 40 Bobcoins limit).
-
-**KevGate** inserts a fast local decision layer in front of those agents. A small model (Kev-4B served via LM Studio) evaluates the unified diff in **~30–60ms** and returns a structured risk classification:
-
-- **PASS** (score < 30): Instantly greenlit. Zero tokens burned.
-- **WARN** (score 30–69): Advisory printed. Commit allowed.
-- **BLOCK** (score ≥ 70): Commit aborted. A structured [Remediation Intent Protocol](#actor-critic-loop) is dispatched to IBM Bob IDE as a task file.
+> **Event**: IBM Bob 2.0 Hackathon (Hosted on lablab.ai)
+> **Repository**: [WilliamAxelC/IBM-hackathon](https://github.com/WilliamAxelC/IBM-hackathon)
+> **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md) | **Hackathon Guide**: [HACKATHON_GUIDE.md](HACKATHON_GUIDE.md) | **Bob Sessions**: [bob_sessions/](bob_sessions/)
+> **Team**: WilliamAxelC (william-dev) · Raja (raja-dev)
 
 ---
 
-## Architecture
+## ⚡ What is S1Gate?
 
-```
-git commit → KevGate pre-filter → Kev-4B (LM Studio) → Policy Engine
-                                                              │
-                                              ┌───────────────┴───────────────┐
-                                           PASS/WARN                        BLOCK
-                                           exit 0                           exit 1 + Bob task
-                                                                                │
-                                                              Universal MCP → IBM Bob / Claude Code / Kiro
+Modern AI coding agents (**IBM Bob**, **Claude Code**, **Agrav**, **Kiro**, **Codex**) excel at deep multi-file code synthesis (**System-2 Deliberative Reasoning**) but create two critical operational bottlenecks when applied at every `git commit`:
+
+1. **Flow-State Latency**: Autoregressive LLM generation takes 5–30s per evaluation — developers end up disabling git hooks with `--no-verify`.
+2. **Token & Quota Burn**: 80–90% of commits are routine, safe changes (formatting, docs, isolated internal refactors). Running heavy models on every micro-commit rapidly exhausts token quotas (such as IBM Bob's strict 40 Bobcoins hackathon limit).
+
+**S1Gate** inserts an ultra-fast **System-1 Decision Layer** at the pre-commit boundary:
+
+```mermaid
+flowchart LR
+    A["git commit"] --> B["Fast Pre-Filter (<2ms)<br/>Shannon Entropy + Secret Regex"]
+    B -->|Clean| C["S1Gate Decision Engine<br/>• Gemini 2.0 Flash Lite (MVP)<br/>• Local LM Studio (Offline)"]
+    C -->|Risk < 30| D["✅ PASS (0 Bobcoins)<br/>Commit Greenlit in <150ms"]
+    C -->|Risk ≥ 70| E["🚫 BLOCK (Commit Aborted)<br/>RIP Task Dispatched to IBM Bob"]
+    E --> F["IBM Bob IDE (System-2)<br/>Remediates & Verifies via MCP"]
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full technical specification.
+- **PASS** (score < 30): Instantly greenlit. Zero tokens or Bobcoins burned.
+- **WARN** (score 30–69): Non-blocking advisory warning printed to terminal.
+- **BLOCK** (score ≥ 70): Commit aborted. A structured **Remediation Intent Protocol (RIP)** is generated for IBM Bob IDE.
 
 ---
 
-## Installation
+## 🔌 Dual-Backend Architecture
 
-**Requirements**: Python 3.11+, [LM Studio](https://lmstudio.ai/) with a model loaded on `localhost:1234`
+S1Gate supports two interchangeable backends:
+
+| Backend | Mode | Speed | Setup | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| **`gemini` (Default for MVP)** | Cloud API | **~100–350ms** | Free API key in `.env` (`gemini-3.5-flash-lite`) | Instant setup, zero local GPU requirements, CI/CD |
+| **`lmstudio`** | Local GPU | **~50–80ms** | Local LM Studio on `localhost:1234` | 100% offline air-gapped privacy (AMD RX 6600 XT, NVIDIA) |
+
+---
+
+## 🌐 Hosted Remote MCP Server for Hackathon Judges
+
+Judges can connect directly to a live, hosted **S1Gate MCP Server** without installing Python or cloning this repository locally!
+
+- **Hosted SSE Endpoint**: `http://10.20.20.11:8000/sse`
+- **Security**: Protected via API Key (`Authorization: Bearer <JUDGE_KEY>` or `?api_key=<JUDGE_KEY>`).
+- **Complete Evaluator Guide**: See [docs/JUDGE_REMOTE_MCP_GUIDE.md](docs/JUDGE_REMOTE_MCP_GUIDE.md).
+
+```json
+{
+  "mcpServers": {
+    "s1gate": {
+      "url": "http://10.20.20.11:8000/sse",
+      "headers": {
+        "Authorization": "Bearer <JUDGE_KEY>"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🚀 Quickstart & Setup
+
+### 1. Installation
 
 ```bash
-# Clone the repo
+# Clone the repository
 git clone https://github.com/WilliamAxelC/IBM-hackathon.git
 cd IBM-hackathon
 
-# Create virtual environment and install
-uv venv .venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+# Install uv (one-time, if not already installed)
+# Windows PowerShell:
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+# macOS / Linux:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Python + all dependencies in one command (uses uv.lock for exact versions)
+uv sync
 ```
 
-### LM Studio Setup
+### 2. Configure Environment (`.env`)
 
-1. Download and install [LM Studio](https://lmstudio.ai/).
-2. Load any instruction-following model (e.g. Kev-4B, Qwen2.5-Coder, Phi-4-mini).
-3. Start the local server on port `1234` (default).
-4. Set the model name in `.kevgate.toml`:
-   ```toml
-   lmstudio_model = "your-model-name-as-shown-in-lmstudio"
-   ```
+For the MVP, S1Gate uses Google AI Studio's free **Gemini 2.0 Flash Lite** API:
+
+```bash
+# Copy the example environment template
+cp .env.example .env
+```
+
+Open `.env` and insert your free Gemini API key:
+```env
+S1GATE_BACKEND=gemini
+GEMINI_API_KEY=your_actual_gemini_api_key_here
+```
+
+> [!IMPORTANT]
+> **Security Guarantee**: `.env` is explicitly registered in [`.gitignore`](.gitignore). Your API key will **never be committed to Git**.
 
 ---
 
-## Quickstart
+### 3. Usage
 
-### 1. Manual diff check
-
+#### Manual Diff Check
 ```bash
-# Check the current staged diff
-kevgate check
+# Evaluate current staged git changes
+uv run s1gate check
 
-# Check a diff file directly (no git repo needed)
-kevgate check --diff src/kevgate/benchmarks/true_positives/01_sql_injection.diff
+# Or evaluate a specific diff file directly
+uv run s1gate check --diff src/kevgate/benchmarks/true_positives/01_sql_injection.diff
+
+# Force a specific backend
+uv run s1gate check --backend gemini
+uv run s1gate check --backend lmstudio
 ```
 
-### 2. Install the git pre-commit hook
-
+#### Install Git Pre-Commit Hook
 ```bash
-kevgate hook install
-# → Installs .git/hooks/pre-commit
-# Every subsequent git commit will run through KevGate automatically.
+# Install automatic pre-commit hook into .git/hooks/pre-commit
+uv run s1gate hook install
 
-kevgate hook uninstall
-# → Removes the hook
+# Every git commit is now automatically guarded by S1Gate!
+# To remove:
+uv run s1gate hook uninstall
 ```
 
-### 3. View resolved configuration
-
+#### Inspect Active Configuration
 ```bash
-kevgate config
+uv run s1gate config
+# Example output:
+# {
+#   "backend": "gemini",
+#   "gemini_api_key": "AIzaSy...key4",
+#   "gemini_model": "gemini-3.5-flash-lite",
+#   "block_threshold": 70,
+#   "warn_threshold": 30,
+#   "offline_behavior": "warn"
+# }
 ```
 
 ---
 
-## MCP Integration (IBM Bob IDE / Claude Code)
+## 🤝 Universal MCP Integration (IBM Bob IDE / Claude Code / Kiro)
 
-KevGate exposes three tools via the [Model Context Protocol](https://modelcontextprotocol.io/):
+S1Gate exposes standard tools via the **Model Context Protocol (MCP)**:
 
-| Tool | Purpose |
-|---|---|
-| `kevgate_triage_diff` | Evaluate a unified diff, get risk classification |
-| `kevgate_inspect_file` | Evaluate staged changes in a specific file |
-| `kevgate_verify_remediation` | Actor-Critic: verify an agent's fix patch |
+| MCP Tool | Purpose |
+| :--- | :--- |
+| `s1gate_triage_diff` | Evaluates unified diff, returns typed risk scores (`choice`, `score`, `nouls`). |
+| `s1gate_inspect_file` | Evaluates changes in a specific file on disk. |
+| `s1gate_verify_remediation` | **Actor-Critic**: Verifies whether an agent's proposed fix resolved the flagged risk. |
 
-### IBM Bob IDE (`mcp.json`)
-
-The [`mcp.json`](mcp.json) at the repo root is pre-configured. In Bob IDE:
-
+### Registering in IBM Bob IDE
+In IBM Bob IDE:
 1. Open **Settings → MCP Servers**.
-2. Click **Add from file** and select `mcp.json`.
-3. KevGate tools appear in Bob's tool list immediately.
-
-### Claude Code (`.claude/mcp.json`)
-
-The [`.claude/mcp.json`](.claude/mcp.json) is pre-configured for Claude Code.
+2. Point Bob to [`mcp.json`](mcp.json) (or run `bob mcp add-json --scope global ...`).
+3. S1Gate tools appear in Bob's active tool palette immediately.
 
 ---
 
-## Actor-Critic Loop
+## 🔄 The Actor-Critic Loop
 
-When a commit is blocked, KevGate writes `.bob/tasks/pending_remediation.json`. Bob IDE's Agent mode picks this up and:
-
-1. Reads the `remediation_hint` from the task file.
-2. Generates a fix patch.
-3. Calls `kevgate_verify_remediation(original_diff, patch)` to verify the fix resolved the risk.
-4. Commits the verified patch.
+When a commit is blocked due to a security flaw or severe bug, S1Gate writes a remediation packet to `.bob/tasks/pending_remediation.json`. IBM Bob's Agent mode picks it up:
 
 ```
 Blocked commit → Bob reads .bob/tasks/pending_remediation.json
-                → Bob generates fix
-                → kevgate_verify_remediation(original, fix) → score: 92 → 4
-                → Verified: PASS → git commit
+               → Bob inspects vulnerability & generates targeted patch
+               → Bob calls s1gate_verify_remediation(original_diff, patch)
+               → Risk drops from 95 → 2 (PASS)
+               → Bob commits the verified fix!
 ```
 
 ---
 
-## Running Tests
+## 📊 Empirical Benchmarks & Error Matrix (Hard Commit Challenge)
+
+To validate S1Gate's System-1 decision layer against real-world production risks, S1Gate includes an automated **Benchmark Harness** evaluated against live **Google Gemini 3.5 Flash Lite**:
+
+- **Dataset**: 20 production git diffs featuring subtle vulnerabilities (SSRF DNS rebinding, JWT algorithm confusion, TOCTOU double-spend, Catastrophic ReDoS, Prototype pollution, Timing attacks, Deserialization RCE, Zip Slip, Buried PATs, and Breaking API keyword conversions) paired with complex benign refactorings (Safe dynamic SQL ASTs, Constant-time loops, Safe literal parsing, Restricted unpicklers, Zero-copy memory views, Thread-safe double-checked locks).
+- **Comparison**: S1Gate Pipeline (Entropy scan + AST filtering + Invariant JSON + Policy Engine) vs. **Naive Direct Gemini 3.5 Flash Lite Prompting**.
+
+### The Pre-Commit Error Matrix & Asymmetric Cost
+
+In developer pre-commit gates, classification errors carry vastly asymmetric business costs:
+
+| Error Type | Taxonomy | Event | Developer & Business Impact |
+| :--- | :--- | :--- | :--- |
+| **True Positive (TP)** | True Flag | Risky code correctly **BLOCKED** | **Vulnerability Shielded**: Zero production harm ($0). |
+| **True Negative (TN)** | Safe Pass | Benign code correctly **PASSED** | **Frictionless Flow**: Instant commit (<150ms). |
+| **False Positive (FP)** | Type I Error | Benign code mistakenly **BLOCKED** | **Developer Friction**: ~2–5 minutes lost reviewing warning. |
+| **False Negative (FN)** | **Type II Error** | Vulnerability mistakenly **PASSED** | **Catastrophic Outage/Breach**: $50,000+ incident cost, leaked keys, CVEs. |
+
+> **Key Result**: S1Gate achieves a **0% Type II Escape Rate (0/10 missed)**, eliminating critical security escapes before code reaches remote branches.
+
+Comprehensive visual charts and per-diff analysis are documented in [docs/benchmarks/BENCHMARK_REPORT.md](docs/benchmarks/BENCHMARK_REPORT.md):
+- **Error Matrix Heatmap**: [`docs/benchmarks/s1gate_error_matrix.png`](docs/benchmarks/s1gate_error_matrix.png) (mirrored to [`bob_sessions/s1gate_error_matrix.png`](bob_sessions/s1gate_error_matrix.png))
+- **Performance Comparison Graph**: [`docs/benchmarks/s1gate_vs_baseline_comparison.png`](docs/benchmarks/s1gate_vs_baseline_comparison.png) (mirrored to [`bob_sessions/s1gate_benchmark_metrics_graph.png`](bob_sessions/s1gate_benchmark_metrics_graph.png))
+
+To re-run the benchmark suite:
+```bash
+# Run the Hard Commit Challenge suite
+python -m kevgate.benchmarks.benchmark_harness --dataset hard
+
+# Run the standard suite
+python -m kevgate.benchmarks.benchmark_harness --dataset standard
+```
+
+---
+
+## 🧪 Running Tests
 
 ```bash
-# Unit tests (no LM Studio required)
-pytest tests/ -v
+# Run all 64 unit tests (no API key required — fully mocked)
+uv run pytest tests/ -v
 
-# Benchmark suite — mock mode (no LM Studio required)
-pytest src/kevgate/benchmarks/ --mock -v
+# Run benchmark suite against a specific diff file
+uv run python -m kevgate.benchmarks.benchmark_harness --dataset hard
 
-# Benchmark suite — live mode (requires LM Studio running)
-pytest src/kevgate/benchmarks/ -v
+# Run standard benchmark suite
+uv run python -m kevgate.benchmarks.benchmark_harness --dataset standard
 ```
 
 ---
 
-## Project Structure
+## 📁 Repository Structure
 
 ```
 IBM-hackathon/
-├── ARCHITECTURE.md                     # Full technical specification
+├── README.md                           # Project overview & quickstart
+├── ARCHITECTURE.md                     # Deep technical specification
 ├── HACKATHON_GUIDE.md                  # Hackathon rules, deadlines, judging criteria
-├── mcp.json                            # IBM Bob IDE MCP registration
-├── .claude/mcp.json                    # Claude Code MCP registration
-├── .kevgate.toml                       # Configuration file (edit model name here)
-├── pyproject.toml                      # Python package definition
-├── bob_sessions/                       # [REQUIRED] Bob IDE task session screenshots
-└── src/kevgate/
-    ├── schema.py                       # DecisionPayload + RemediationVerification types
-    ├── config.py                       # KevGateConfig (pydantic-settings, .kevgate.toml)
-    ├── exceptions.py                   # Typed exception hierarchy
-    ├── entropy_scanner.py              # Shannon entropy + secret regex pre-filter
-    ├── diff_parser.py                  # Unified diff parser, lockfile detection
-    ├── lmstudio_client.py              # HTTP adapter for LM Studio API
-    ├── policy_engine.py                # Risk threshold evaluation + Bob task generator
-    ├── cli.py                          # kevgate CLI (check, hook install/uninstall, config)
-    ├── hook_manager.py                 # Git pre-commit hook installer
+├── .env.example                        # Template for API keys and configuration
+├── .gitignore                          # Ensures .env & secrets are never committed
+├── mcp.json                            # Universal MCP registration
+├── bob_sessions/                       # [REQUIRED DELIVERABLE] Bob IDE task session screenshots
+└── src/kevgate/                        # Core S1Gate engine implementation
+    ├── schema.py                       # Pydantic DecisionPayload + verification models
+    ├── config.py                       # Configuration loader (.env + CLI overrides)
+    ├── entropy_scanner.py              # Sub-millisecond Shannon entropy secret scanner
+    ├── diff_parser.py                  # Unified diff parser & lockfile filter
+    ├── policy_engine.py                # Asymmetric risk threshold evaluation
+    ├── cli.py                          # s1gate CLI commands
     ├── mcp_server.py                   # Universal MCP server (stdio)
-    └── benchmarks/
-        ├── true_positives/             # 10 risky diffs (SQLi, secrets, auth bypass, ...)
-        └── false_positives/            # 10 safe diffs (formatting, docs, tests, ...)
+    └── benchmarks/                     # 20 true positive / false positive diff suites
 ```
 
 ---
 
-## ⚠️ Hackathon Eligibility
+## 👥 Team
 
-- IBM Bob IDE session screenshots: [`bob_sessions/`](bob_sessions/)
-- Architecture document: [`ARCHITECTURE.md`](ARCHITECTURE.md)
-- No proprietary or PII data used — all benchmark diffs are synthetic.
+| Member | Branch | Contribution |
+| :--- | :--- | :--- |
+| **WilliamAxelC** | `william-dev` | Core engine, Gemini backend, SSE MCP server, benchmark harness, Bob IDE sessions |
+| **Raja** | `raja-dev` | Demo script, submission polish, checklist, documentation review |
+
+---
+
+## ⚠️ Hackathon Eligibility & Deliverables
+
+- **IBM Bob IDE Evidence**: Verifiable task session screenshots captured in [`bob_sessions/`](bob_sessions/).
+- **Data Compliance**: 100% synthetic and permissible benchmark diffs; zero proprietary or PII data.
+- **Full Architecture**: Documented in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+- **64/64 tests passing** — run `uv run pytest tests/ -v` to verify.

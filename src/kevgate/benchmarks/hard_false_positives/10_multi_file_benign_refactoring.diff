@@ -1,0 +1,29 @@
+diff --git a/src/core/interfaces.py b/src/core/interfaces.py
+index b0c1d2e..f3a4b5c 100644
+--- a/src/core/interfaces.py
++++ b/src/core/interfaces.py
+@@ -1,6 +1,8 @@
+-from typing import Protocol
++from typing import Protocol, runtime_checkable
+ 
++@runtime_checkable
+ class MetricCollector(Protocol):
+     """Standard interface for application telemetry emission."""
+-    def emit(self, metric_name: str, value: float) -> None:
++    def emit(self, metric_name: str, value: float, tags: dict | None = None) -> None:
+         ...
+diff --git a/src/telemetry/statsd.py b/src/telemetry/statsd.py
+index c1d2e3f..a4b5c6d 100644
+--- a/src/telemetry/statsd.py
++++ b/src/telemetry/statsd.py
+@@ -1,7 +1,10 @@
+-class StatsDCollector:
+-    def emit(self, metric_name: str, value: float) -> None:
++from src.core.interfaces import MetricCollector
++
++class StatsDCollector(MetricCollector):
++    def emit(self, metric_name: str, value: float, tags: dict | None = None) -> None:
+         # Formatted statsd wire protocol emission
+-        pass
++        tag_suffix = f"|#{','.join(f'{k}:{v}' for k, v in tags.items())}" if tags else ""
++        # Construct wire payload for event stream

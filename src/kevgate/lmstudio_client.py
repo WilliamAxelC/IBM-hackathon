@@ -14,7 +14,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig as KevGateConfig
 from kevgate.exceptions import DecisionParseError, LMStudioUnavailableError
 from kevgate.schema import DecisionPayload, RemediationVerification
 
@@ -23,7 +23,7 @@ from kevgate.schema import DecisionPayload, RemediationVerification
 # ---------------------------------------------------------------------------
 
 _TRIAGE_SYSTEM_PROMPT = """\
-You are KevGate, a security-focused code review classifier. Analyze the provided git diff and return a JSON object with exactly these fields:
+You are S1Gate, a security-focused code review classifier. Analyze the provided git diff and return a JSON object with exactly these fields:
 
 {
   "category": one of ["safe_refactor","benign_feature","contract_break","security_risk","dependency_shift"],
@@ -54,7 +54,7 @@ Diff to analyze:
 {context_block}"""
 
 _VERIFY_SYSTEM_PROMPT = """\
-You are KevGate, verifying whether a remediation patch resolves the original risk. Return a JSON object:
+You are S1Gate, verifying whether a remediation patch resolves the original risk. Return a JSON object:
 
 {
   "verified": boolean,
@@ -92,7 +92,7 @@ _OFFLINE_PASS_PAYLOAD = DecisionPayload(
     is_breaking_change=False,
     exposes_unprotected_resource=False,
     unhandled_failure_mode=False,
-    summary="KevGate offline — LM Studio unavailable, commit allowed per offline_behavior setting.",
+    summary="S1Gate offline — LM Studio unavailable, commit allowed per offline_behavior setting.",
     target_file=None,
     target_lines=None,
     remediation_hint=None,
@@ -163,7 +163,7 @@ class LMStudioClient:
             raise exc
         if behavior == "warn":
             print(
-                f"[kevgate] WARNING: {exc} — allowing commit (offline_behavior=warn)",
+                f"[s1gate] WARNING: {exc} — allowing commit (offline_behavior=warn)",
                 file=sys.stderr,
             )
         # 'pass' or 'warn' → return synthetic safe payload
@@ -244,7 +244,7 @@ class LMStudioClient:
                 previous_score=score,
                 new_score=score,
                 delta=0,
-                message="KevGate offline — could not verify remediation.",
+                message="S1Gate offline — could not verify remediation.",
             )
 
         try:

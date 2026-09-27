@@ -1,0 +1,20 @@
+diff --git a/src/cache/session_store.py b/src/cache/session_store.py
+index a7b8c9d..e0f1a2b 100644
+--- a/src/cache/session_store.py
++++ b/src/cache/session_store.py
+@@ -3,17 +3,18 @@
+ import json
++import pickle
+ from typing import Any, Optional
+ 
+ class SessionStore:
+     def __init__(self, redis_client):
+         self.redis = redis_client
+ 
+     async def get_session(self, session_id: str) -> Optional[dict]:
+         raw = await self.redis.get(f"sess:{session_id}")
+         if not raw:
+             return None
+-        return json.loads(raw.decode("utf-8"))
++        # Fast binary deserialization of cached session state
++        return pickle.loads(raw)

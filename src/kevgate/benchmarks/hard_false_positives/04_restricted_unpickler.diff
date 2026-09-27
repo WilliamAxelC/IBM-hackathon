@@ -1,0 +1,23 @@
+diff --git a/src/serialization/safe_loader.py b/src/serialization/safe_loader.py
+index b4c5d6e..f7a8b9c 100644
+--- a/src/serialization/safe_loader.py
++++ b/src/serialization/safe_loader.py
+@@ -1,9 +1,24 @@
+ import io
+ import pickle
+ 
++class RestrictedUnpickler(pickle.Unpickler):
++    """Safe unpickler strictly allowing only basic primitive types."""
++    SAFE_BUILTINS = {"int", "float", "str", "bool", "tuple", "list", "dict", "set"}
++
++    def find_class(self, module, name):
++        if module == "builtins" and name in self.SAFE_BUILTINS:
++            return getattr(__builtins__, name)
++        # Forbid all module execution (os.system, subprocess, etc.)
++        raise pickle.UnpicklingError(f"Global '{module}.{name}' is forbidden")
++
+ def safe_unpickle_data(data: bytes) -> object:
+-    # Placeholder
+-    return None
++    """Deserialize data safely using the restricted unpickler."""
++    return RestrictedUnpickler(io.BytesIO(data)).load()

@@ -1,0 +1,20 @@
+diff --git a/src/network/packet.py b/src/network/packet.py
+index c5d6e7f..a8b9c0d 100644
+--- a/src/network/packet.py
++++ b/src/network/packet.py
+@@ -1,12 +1,18 @@
+ import struct
+ 
+-def parse_header_legacy(raw_bytes: bytes) -> tuple[int, int, int]:
+-    pkt_type = raw_bytes[0]
+-    length = int.from_bytes(raw_bytes[1:3], "big")
+-    seq = int.from_bytes(raw_bytes[3:7], "big")
+-    return pkt_type, length, seq
++def parse_header_fast(raw_bytes: bytes) -> tuple[int, int, int]:
++    """High-throughput zero-copy header parser using memoryview and struct."""
++    if len(raw_bytes) < 7:
++        raise ValueError("Packet truncated")
++    view = memoryview(raw_bytes)
++    # Unpack big-endian unsigned char (B), unsigned short (H), unsigned int (I)
++    pkt_type, length, seq = struct.unpack_from(">BHI", view, 0)
++    return pkt_type, length, seq

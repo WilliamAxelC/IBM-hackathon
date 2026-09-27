@@ -6,7 +6,7 @@ import json
 import pytest
 import httpx
 
-from kevgate.config import KevGateConfig
+from kevgate.config import S1GateConfig as KevGateConfig
 from kevgate.exceptions import DecisionParseError, LMStudioUnavailableError
 from kevgate.lmstudio_client import LMStudioClient
 from kevgate.schema import DecisionPayload, RemediationVerification

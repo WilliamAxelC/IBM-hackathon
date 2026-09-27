@@ -1,0 +1,18 @@
+diff --git a/src/db/query_builder.py b/src/db/query_builder.py
+index e1f2a3b..c4d5e6f 100644
+--- a/src/db/query_builder.py
++++ b/src/db/query_builder.py
+@@ -10,12 +10,14 @@ from psycopg import sql
+ 
+ def build_dynamic_select(cursor, table_name: str, filter_col: str, filter_val: str) -> list:
+-    # Static query
+-    cursor.execute("SELECT id, name FROM users WHERE status = %s", (filter_val,))
+-    return cursor.fetchall()
++    # Construct dynamic query using psycopg sql composables
++    # Naive analyzers often falsely flag this due to .format() on sql.SQL
++    query = sql.SQL("SELECT id, name FROM {tbl} WHERE {col} = %s").format(
++        tbl=sql.Identifier(table_name),
++        col=sql.Identifier(filter_col),
++    )
++    cursor.execute(query, (filter_val,))
++    return cursor.fetchall()
