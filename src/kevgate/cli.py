@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -32,6 +33,7 @@ from kevgate.gemini_client import GeminiClient
 from kevgate.hook_manager import install_hook, uninstall_hook
 from kevgate.lmstudio_client import LMStudioClient
 from kevgate.policy_engine import GateDecision, evaluate, format_gate_result, generate_bob_task
+from kevgate.schema import DecisionPayload
 
 app = typer.Typer(
     name="s1gate",
@@ -73,6 +75,7 @@ def check(
 
     Exits with code 0 on PASS/WARN, code 1 on BLOCK.
     """
+    t0 = time.perf_counter()
     config = S1GateConfig()
     if backend:
         config.backend = backend  # type: ignore
@@ -98,12 +101,43 @@ def check(
     chunks = parse_unified_diff(raw_diff)
     triageable = filter_triageable(chunks)
 
-    if not triageable and not secret_findings:
-        typer.echo("[s1gate] Only lockfiles/artifacts in diff — skipping LLM triage. ✓ PASS")
+    # FAST PATH 1: Instant short-circuit on high-entropy secrets / credentials (< 0.05ms)
+    if secret_findings:
+        elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
+        first_s = secret_findings[0]
+        target_f = chunks[0].file_b if chunks else None
+        payload = DecisionPayload(
+            category="security_risk",
+            risk_score=95,
+            confidence=0.99,
+            is_breaking_change=False,
+            exposes_unprotected_resource=True,
+            unhandled_failure_mode=False,
+            summary=f"Critical credential/secret leak detected ({first_s.pattern_name} with entropy {first_s.entropy_score:.2f}).",
+            target_file=target_f,
+            target_lines=str(first_s.line_number),
+            remediation_hint=f"Revoke credential immediately and remove {first_s.pattern_name} from git history.",
+            trigger_agent=True,
+            processing_time_ms=elapsed_ms,
+        )
+        decision = GateDecision.BLOCK
+        use_color = not no_color and sys.stdout.isatty()
+        typer.echo(format_gate_result(decision, payload, len(secret_findings), use_color=use_color, processing_time_ms=elapsed_ms))
+        try:
+            task_file = generate_bob_task(payload)
+            typer.echo(f"[s1gate] Bob task written → {task_file}", err=True)
+        except Exception as exc:
+            typer.echo(f"[s1gate] Warning: Could not write Bob task: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+    # FAST PATH 2: Instant pass if only non-code / lockfiles / metadata changed (< 0.05ms)
+    if not triageable:
+        elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
+        typer.echo(f"[s1gate] Only lockfiles/artifacts in diff (latency: {elapsed_ms:.1f}ms) — skipping LLM triage. ✓ PASS")
         raise typer.Exit(code=0)
 
     # --- 4. System-1 Triage (Gemini or LM Studio) ---
-    condensed = chunks_to_condensed_diff(triageable) if triageable else raw_diff[:4000]
+    condensed = chunks_to_condensed_diff(triageable)
 
     async def _run_triage():
         if config.backend == "gemini":
@@ -119,12 +153,16 @@ def check(
         typer.echo(f"[s1gate] {exc}", err=True)
         raise typer.Exit(code=1)
 
+    elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
+    if payload.processing_time_ms is None:
+        payload.processing_time_ms = elapsed_ms
+
     # --- 5. Policy evaluation ---
     decision = evaluate(payload, config, secret_findings_count=len(secret_findings))
 
     # --- 6. Output ---
     use_color = not no_color and sys.stdout.isatty()
-    typer.echo(format_gate_result(decision, payload, len(secret_findings), use_color=use_color))
+    typer.echo(format_gate_result(decision, payload, len(secret_findings), use_color=use_color, processing_time_ms=payload.processing_time_ms))
 
     # --- 7. On BLOCK: write Bob task and exit 1 ---
     if decision == GateDecision.BLOCK:

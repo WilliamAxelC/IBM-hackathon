@@ -91,6 +91,13 @@ def parse_unified_diff(raw_diff: str) -> list[DiffChunk]:
             file_path = parts[1] if len(parts) == 2 else line.split()[-1]
             current = DiffChunk(file_path=file_path)
             continue
+        elif current is None and (line.startswith("--- ") or line.startswith("+++ ")):
+            clean = line[4:].strip().split("\t")[0]
+            if clean.startswith("a/") or clean.startswith("b/"):
+                clean = clean[2:]
+            if clean and clean != "/dev/null":
+                current = DiffChunk(file_path=clean)
+            continue
 
         if current is None:
             continue

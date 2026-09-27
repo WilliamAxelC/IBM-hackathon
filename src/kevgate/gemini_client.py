@@ -1,12 +1,15 @@
 """
 Gemini API client adapter for S1Gate System-1 triage.
 
-Uses Google AI Studio's Gemini 3.5 Flash Lite with structured JSON decoding.
+Uses Google AI Studio's Gemini Flash models with structured JSON decoding,
+connection pooling (keep-alive), fast token capping, and thinking budget optimization.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 from typing import Any, Optional
 
 import httpx
@@ -65,7 +68,34 @@ _OFFLINE_PASS_PAYLOAD = DecisionPayload(
     target_lines=None,
     remediation_hint=None,
     trigger_agent=False,
+    processing_time_ms=0.0,
 )
+
+# Persistent HTTP client connection pools with keep-alive
+_shared_client: Optional[httpx.Client] = None
+_shared_async_client: Optional[httpx.AsyncClient] = None
+
+
+def get_shared_client() -> httpx.Client:
+    """Get or create the shared synchronous HTTP client with connection pooling."""
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.Client(
+            timeout=30.0,
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=60.0),
+        )
+    return _shared_client
+
+
+def get_shared_async_client() -> httpx.AsyncClient:
+    """Get or create the shared asynchronous HTTP client with connection pooling."""
+    global _shared_async_client
+    if _shared_async_client is None or _shared_async_client.is_closed:
+        _shared_async_client = httpx.AsyncClient(
+            timeout=30.0,
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=60.0),
+        )
+    return _shared_async_client
 
 
 class GeminiClient:
@@ -83,37 +113,51 @@ class GeminiClient:
         self.base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
         self._client = client
         self._async_client = async_client
+        self._supports_thinking = True
 
     def _get_client(self) -> httpx.Client:
         if self._client is None:
-            self._client = httpx.Client(timeout=60.0)
+            self._client = get_shared_client()
         return self._client
 
     def _get_async_client(self) -> httpx.AsyncClient:
         if self._async_client is None:
-            self._async_client = httpx.AsyncClient(timeout=60.0)
+            self._async_client = get_shared_async_client()
         return self._async_client
+
+    def _build_generation_config(self, max_tokens: int = 256) -> dict[str, Any]:
+        cfg: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "temperature": 0.0,
+            "maxOutputTokens": max_tokens,
+        }
+        if self._supports_thinking and ("3." in self.model or "2.5" in self.model):
+            cfg["thinkingConfig"] = {"thinkingBudget": 1}
+        return cfg
 
     async def __aenter__(self) -> "GeminiClient":
         if self._async_client is None:
-            self._async_client = httpx.AsyncClient(timeout=60.0)
+            self._async_client = get_shared_async_client()
         return self
-
+        
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.aclose()
 
     async def aclose(self) -> None:
-        if self._async_client is not None:
+        global _shared_async_client
+        if self._async_client is not None and self._async_client is not _shared_async_client:
             await self._async_client.aclose()
             self._async_client = None
 
     def close(self) -> None:
-        if self._client is not None:
+        global _shared_client
+        if self._client is not None and self._client is not _shared_client:
             self._client.close()
             self._client = None
 
     def triage_diff(self, diff: str, context: Optional[str] = None) -> DecisionPayload:
         """Triage a unified diff synchronously using Gemini API."""
+        t0 = time.perf_counter()
         if not self.api_key:
             if self.config.offline_behavior in ("pass", "warn"):
                 return _OFFLINE_PASS_PAYLOAD
@@ -128,10 +172,7 @@ class GeminiClient:
         payload = {
             "system_instruction": {"parts": [{"text": _TRIAGE_SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": user_content}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.0,
-            },
+            "generationConfig": self._build_generation_config(max_tokens=256),
         }
 
         raw_text = ""
@@ -140,6 +181,12 @@ class GeminiClient:
             try:
                 client = self._get_client()
                 resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+                if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                    # Model variant does not support thinkingConfig; fall back immediately
+                    self._supports_thinking = False
+                    payload["generationConfig"] = self._build_generation_config(max_tokens=256)
+                    resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+
                 if resp.status_code == 429 and attempt < max_retries - 1:
                     time.sleep((2 ** attempt) * 2)
                     continue
@@ -147,7 +194,9 @@ class GeminiClient:
                 data = resp.json()
                 raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                 raw_json = json.loads(raw_text)
-                return DecisionPayload.model_validate(raw_json)
+                decision = DecisionPayload.model_validate(raw_json)
+                decision.processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
+                return decision
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
                     time.sleep((2 ** attempt) * 2)
@@ -167,6 +216,7 @@ class GeminiClient:
 
     async def triage_diff_async(self, diff: str, context: Optional[str] = None) -> DecisionPayload:
         """Triage a unified diff asynchronously using Gemini API."""
+        t0 = time.perf_counter()
         if not self.api_key:
             if self.config.offline_behavior in ("pass", "warn"):
                 return _OFFLINE_PASS_PAYLOAD
@@ -181,10 +231,7 @@ class GeminiClient:
         payload = {
             "system_instruction": {"parts": [{"text": _TRIAGE_SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": user_content}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.0,
-            },
+            "generationConfig": self._build_generation_config(max_tokens=256),
         }
 
         raw_text = ""
@@ -193,6 +240,12 @@ class GeminiClient:
             try:
                 client = self._get_async_client()
                 resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+                if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                    # Model variant does not support thinkingConfig; fall back immediately
+                    self._supports_thinking = False
+                    payload["generationConfig"] = self._build_generation_config(max_tokens=256)
+                    resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+
                 if resp.status_code == 429 and attempt < max_retries - 1:
                     await asyncio.sleep((2 ** attempt) * 2)
                     continue
@@ -200,7 +253,9 @@ class GeminiClient:
                 data = resp.json()
                 raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
                 raw_json = json.loads(raw_text)
-                return DecisionPayload.model_validate(raw_json)
+                decision = DecisionPayload.model_validate(raw_json)
+                decision.processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
+                return decision
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 429 and attempt < max_retries - 1:
                     await asyncio.sleep((2 ** attempt) * 2)
@@ -222,6 +277,7 @@ class GeminiClient:
         self, original_diff: str, remediation_patch: str, previous_score: int = 70
     ) -> RemediationVerification:
         """Verify whether a remediation patch resolves the flagged risk."""
+        t0 = time.perf_counter()
         if not self.api_key:
             return RemediationVerification(
                 verified=True,
@@ -229,6 +285,7 @@ class GeminiClient:
                 new_score=0,
                 delta=-previous_score,
                 message="Offline mode — remediation accepted.",
+                processing_time_ms=0.0,
             )
 
         user_content = (
@@ -241,21 +298,23 @@ class GeminiClient:
         payload = {
             "system_instruction": {"parts": [{"text": _VERIFY_SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": user_content}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.0,
-            },
+            "generationConfig": self._build_generation_config(max_tokens=150),
         }
 
-        raw_text = ""
         try:
             client = self._get_client()
             resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+            if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                self._supports_thinking = False
+                payload["generationConfig"] = self._build_generation_config(max_tokens=150)
+                resp = client.post(f"{self.base_url}?key={self.api_key}", json=payload)
             resp.raise_for_status()
             data = resp.json()
             raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
             raw_json = json.loads(raw_text)
-            return RemediationVerification.model_validate(raw_json)
+            res = RemediationVerification.model_validate(raw_json)
+            res.processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
+            return res
         except Exception:
             return RemediationVerification(
                 verified=True,
@@ -263,12 +322,14 @@ class GeminiClient:
                 new_score=0,
                 delta=-previous_score,
                 message="Remediation accepted.",
+                processing_time_ms=round((time.perf_counter() - t0) * 1000, 2),
             )
 
     async def verify_remediation_async(
         self, original_diff: str, remediation_patch: str, previous_score: int = 70
     ) -> RemediationVerification:
         """Verify whether a remediation patch resolves the risk asynchronously."""
+        t0 = time.perf_counter()
         if not self.api_key:
             return RemediationVerification(
                 verified=True,
@@ -276,6 +337,7 @@ class GeminiClient:
                 new_score=0,
                 delta=-previous_score,
                 message="Offline mode — remediation accepted.",
+                processing_time_ms=0.0,
             )
 
         user_content = (
@@ -288,20 +350,23 @@ class GeminiClient:
         payload = {
             "system_instruction": {"parts": [{"text": _VERIFY_SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": user_content}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.0,
-            },
+            "generationConfig": self._build_generation_config(max_tokens=150),
         }
 
         try:
             client = self._get_async_client()
             resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
+            if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                self._supports_thinking = False
+                payload["generationConfig"] = self._build_generation_config(max_tokens=150)
+                resp = await client.post(f"{self.base_url}?key={self.api_key}", json=payload)
             resp.raise_for_status()
             data = resp.json()
             raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
             raw_json = json.loads(raw_text)
-            return RemediationVerification.model_validate(raw_json)
+            res = RemediationVerification.model_validate(raw_json)
+            res.processing_time_ms = round((time.perf_counter() - t0) * 1000, 2)
+            return res
         except Exception:
             return RemediationVerification(
                 verified=True,
@@ -309,4 +374,5 @@ class GeminiClient:
                 new_score=0,
                 delta=-previous_score,
                 message="Remediation accepted.",
+                processing_time_ms=round((time.perf_counter() - t0) * 1000, 2),
             )

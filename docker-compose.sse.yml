@@ -15,7 +15,7 @@ services:
       - S1GATE_SERVER_API_KEY=${S1GATE_SERVER_API_KEY:-s1gate-judge-secret-key-2026}
       # Gemini API Key (or LM Studio URL)
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL=gemini-3.5-flash-lite
+      - GEMINI_MODEL=gemini-3.1-flash-lite
       - S1GATE_BACKEND=gemini
       - S1GATE_BLOCK_THRESHOLD=70
       - S1GATE_WARN_THRESHOLD=30
