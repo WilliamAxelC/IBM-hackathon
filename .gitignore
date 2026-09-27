@@ -32,6 +32,8 @@ htmlcov/
 # Tool caches
 .playwright-mcp/
 
-# S1Gate generated files
+# S1Gate generated files & QA test cases
 .bob/tasks/pending_remediation.json
 .s1gate/
+qa_vulnerable_cases/
+
